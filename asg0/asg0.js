@@ -38,24 +38,24 @@ function main() {
     ctx.stroke();
   }
 
-  //get two html input elements with id x and y
-  var x = document.getElementById('x');
-  var y = document.getElementById('y');
-  //get the value of the input elements
-  var xVal = x.value;
-  var yVal = y.value;
-  //convert the value to a number
-  var xNum = parseFloat(xVal);
-  var yNum = parseFloat(yVal);
-  //create a vector with the value
-  var v1 = new Vector3([xNum, yNum, 0]);
+  //add fields for input x and y slightly under the canvas
+  var xField = document.createElement('input');
+  xField.id = 'x';
+  xField.type = 'number';
+  xField.placeholder = 'Enter x';
+  document.body.appendChild(xField);
+  var yField = document.createElement('input');
+  yField.id = 'y';
+  yField.type = 'number';
+  yField.placeholder = 'Enter y';
+  document.body.appendChild(yField);
+  //add a button with id draw
+  var draw = document.createElement('button');
+  draw.id = 'draw';
+  draw.textContent = 'Draw';
+  document.body.appendChild(draw);
+  
 
-  //html button with id draw
-  var draw = document.getElementById('draw');
-  //add event listener to the button
-  draw.addEventListener('click', function() {
-    drawVector(v1, 'rgba(255, 0, 0, 1.0)');
-  });
 
   //var v1 = new Vector3([2.25, 2.25, 0]);
   //drawVector(v1, 'rgba(255, 0, 0, 1.0)');
