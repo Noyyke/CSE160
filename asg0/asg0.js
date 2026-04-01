@@ -10,10 +10,10 @@ function main() {
   // Get the rendering context for 2DCG
   var ctx = canvas.getContext('2d');
 
-  var rectX = 120;
-  var rectY = 10;
-  var rectW = 150;
-  var rectH = 150;
+  var rectX = 500;
+  var rectY = 100;
+  var rectW = 400;
+  var rectH = 400;
   ctx.fillStyle = 'rgba(0, 0, 0, 1.0)';
   ctx.fillRect(rectX, rectY, rectW, rectH);
 
