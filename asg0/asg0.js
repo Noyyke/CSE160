@@ -24,6 +24,7 @@ function main() {
     ctx.lineTo(0, 0);
     ctx.closePath();
   }
-  var v1 = new Vector3(2.25, 2.25, 0);
+  //vector v1 with z coordinate 0
+  var v1 = new Vector3([2.25, 2.25, 0]);
   drawVector(v1, 'rgba(255, 0, 0, 1.0)');
 }
