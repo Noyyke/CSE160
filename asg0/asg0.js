@@ -37,6 +37,26 @@ function main() {
     ctx.lineWidth = 2;
     ctx.stroke();
   }
-  var v1 = new Vector3([2.25, 2.25, 0]);
-  drawVector(v1, 'rgba(255, 0, 0, 1.0)');
+
+  //get two html input elements with id x and y
+  var x = document.getElementById('x');
+  var y = document.getElementById('y');
+  //get the value of the input elements
+  var xVal = x.value;
+  var yVal = y.value;
+  //convert the value to a number
+  var xNum = parseFloat(xVal);
+  var yNum = parseFloat(yVal);
+  //create a vector with the value
+  var v1 = new Vector3([xNum, yNum, 0]);
+
+  //html button with id draw
+  var draw = document.getElementById('draw');
+  //add event listener to the button
+  draw.addEventListener('click', function() {
+    drawVector(v1, 'rgba(255, 0, 0, 1.0)');
+  });
+
+  //var v1 = new Vector3([2.25, 2.25, 0]);
+  //drawVector(v1, 'rgba(255, 0, 0, 1.0)');
 }
