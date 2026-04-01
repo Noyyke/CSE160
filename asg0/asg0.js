@@ -12,8 +12,8 @@ function main() {
 
   var rectX = 120;
   var rectY = 10;
-  var rectW = 400;
-  var rectH = 400;
+  var rectW = 150;
+  var rectH = 150;
   ctx.fillStyle = 'rgba(0, 0, 0, 1.0)';
   ctx.fillRect(rectX, rectY, rectW, rectH);
 
