@@ -1,19 +1,22 @@
 // DrawTriangle.js (c) 2012 matsuda
 function main() {  
-  // Retrieve <canvas> element
   var canvas = document.getElementById('example');  
   if (!canvas) { 
     console.log('Failed to retrieve the <canvas> element');
     return false; 
   } 
 
-  // Get the rendering context for 2DCG
-  var ctx = canvas.getContext('2d');
-
   var rectX = 500;
   var rectY = 100;
   var rectW = 400;
   var rectH = 400;
+
+  // Bitmap size must fit the rectangle; HTML width/height default (e.g. 400×400) clips anything outside.
+  canvas.width = rectX + rectW;
+  canvas.height = rectY + rectH;
+
+  var ctx = canvas.getContext('2d');
+
   ctx.fillStyle = 'rgba(0, 0, 0, 1.0)';
   ctx.fillRect(rectX, rectY, rectW, rectH);
 
