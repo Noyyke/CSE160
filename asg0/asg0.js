@@ -14,6 +14,10 @@ function main() {
   // Bitmap size must fit the rectangle; HTML width/height default (e.g. 400×400) clips anything outside.
   canvas.width = rectX + rectW;
   canvas.height = rectY + rectH;
+  // Match CSS layout size to bitmap (avoids squishing when host CSS uses max-width:100% on canvas)
+  canvas.style.width = canvas.width + 'px';
+  canvas.style.height = canvas.height + 'px';
+  canvas.style.maxWidth = 'none';
 
   var ctx = canvas.getContext('2d');
 
