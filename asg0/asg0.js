@@ -42,6 +42,8 @@ function main() {
 
   var currentV1 = null;
   var currentV2 = null;
+  var greenVectors = [];
+  var greenColor = 'rgba(0, 200, 0, 0.55)';
 
   function redrawScene() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -54,6 +56,9 @@ function main() {
     if (currentV2) {
       drawVector(currentV2, 'rgba(0, 0, 255, 1.0)');
     }
+    for (var gi = 0; gi < greenVectors.length; gi++) {
+      drawVector(greenVectors[gi], greenColor);
+    }
   }
 
   //add fields for input x and y slightly under the canvas centered horizontally
@@ -65,6 +70,7 @@ function main() {
   var label = document.createElement('label');
   label.textContent = 'First Vector';
   container.appendChild(label);
+
   //add 10px of gap between the label and the input fields
   var gap = document.createElement('div');
   gap.style.height = '10px';
@@ -74,12 +80,14 @@ function main() {
   xField.type = 'number';
   xField.placeholder = 'Enter x';
   container.appendChild(xField);
+
   var yField = document.createElement('input');
   yField.id = 'y';
   yField.type = 'number';
   yField.placeholder = 'Enter y';
   container.appendChild(yField);
   //add a button with id draw
+
   var draw = document.createElement('button');
   draw.id = 'draw';
   draw.textContent = 'Draw';
@@ -94,6 +102,7 @@ function main() {
       return;
     }
     currentV1 = new Vector3([xVal, yVal, 0]);
+    greenVectors = [];
     redrawScene();
   });
 
@@ -120,10 +129,12 @@ function main() {
   xField2.placeholder = 'Enter x';
   container2.appendChild(xField2);
   var yField2 = document.createElement('input');
+  
   yField2.id = 'y2';
   yField2.type = 'number';
   yField2.placeholder = 'Enter y';
   container2.appendChild(yField2);
+
   var draw2 = document.createElement('button');
   draw2.id = 'draw2';
   draw2.textContent = 'Draw';
@@ -137,6 +148,120 @@ function main() {
       return;
     }
     currentV2 = new Vector3([xVal2, yVal2, 0]);
+    greenVectors = [];
     redrawScene();
   });
+
+  // Operation row: own block below both vector rows (not inside the first row flex)
+  var opsContainer = document.createElement('div');
+  opsContainer.style.display = 'flex';
+  opsContainer.style.flexWrap = 'wrap';
+  opsContainer.style.justifyContent = 'center';
+  opsContainer.style.alignItems = 'center';
+  opsContainer.style.gap = '10px';
+  opsContainer.style.marginTop = '16px';
+  document.body.appendChild(opsContainer);
+
+  var operationSelect = document.createElement('select');
+  operationSelect.id = 'operation';
+  operationSelect.appendChild(new Option('Add', 'add'));
+  operationSelect.appendChild(new Option('Subtract', 'subtract'));
+  operationSelect.appendChild(new Option('Multiply', 'multiply'));
+  operationSelect.appendChild(new Option('Divide', 'divide'));
+  operationSelect.appendChild(new Option('Normalize', 'normalize'));
+  operationSelect.appendChild(new Option('Magnitude', 'magnitude'));
+  operationSelect.appendChild(new Option('Angle Between', 'angle between'))
+  operationSelect.appendChild(new Option('Area', 'area'))
+  opsContainer.appendChild(operationSelect);
+
+  var scalarField = document.createElement('input');
+  scalarField.id = 'scalar';
+  scalarField.type = 'number';
+  scalarField.placeholder = 'Enter scalar';
+  opsContainer.appendChild(scalarField);
+
+  var drawResult = document.createElement('button');
+  drawResult.id = 'drawResult';
+  drawResult.textContent = 'Draw Resulting Vector';
+  opsContainer.appendChild(drawResult);
+
+  drawResult.addEventListener('click', function() {
+    var op = operationSelect.value;
+    var scalar = parseFloat(scalarField.value);
+    if (!currentV1 || !currentV2) {
+      return;
+    }
+
+    if (op === 'add') {
+      var sum = new Vector3();
+      sum.set(currentV1);
+      sum.add(currentV2);
+      greenVectors = [sum];
+    } else if (op === 'subtract') {
+      var diff = new Vector3();
+      diff.set(currentV1);
+      diff.sub(currentV2);
+      greenVectors = [diff];
+    } else if (op === 'multiply') {
+      if (isNaN(scalar)) {
+        return;
+      }
+      var g1 = new Vector3();
+      g1.set(currentV1);
+      g1.mul(scalar);
+      var g2 = new Vector3();
+      g2.set(currentV2);
+      g2.mul(scalar);
+      greenVectors = [g1, g2];
+    } else if (op === 'divide') {
+      if (isNaN(scalar) || scalar === 0) {
+        return;
+      }
+      var h1 = new Vector3();
+      h1.set(currentV1);
+      h1.div(scalar);
+      var h2 = new Vector3();
+      h2.set(currentV2);
+      h2.div(scalar);
+      greenVectors = [h1, h2];
+    } else if (op === 'normalize') {
+      var n1 = new Vector3();
+      n1.set(currentV1);
+      n1.normalize();
+      var n2 = new Vector3();
+      n2.set(currentV2);
+      n2.normalize();
+      greenVectors = [n1, n2];
+    } else if (op === 'magnitude') {
+      //display magnitudes in f12 console
+      // Display magnitudes in f12 console
+      console.log("Magnitude of V1:", currentV1.magnitude());
+      console.log("Magnitude of V2:", currentV2.magnitude());
+      // Optionally, clear greenVectors
+      greenVectors = [];
+
+    } else if (op === 'angle between') {
+    // Calculate the angle between currentV1 and currentV2 and display it in the f12 console in degrees.
+    var dot = Vector3.dot(currentV1, currentV2);
+    var mag1 = currentV1.magnitude();
+    var mag2 = currentV2.magnitude();
+    var cosTheta = dot / (mag1 * mag2);
+    // Clamp for numerical stability
+    cosTheta = Math.max(-1, Math.min(1, cosTheta));
+    var angleRad = Math.acos(cosTheta);
+    var angleDeg = angleRad * (180 / Math.PI);
+    console.log("Angle between V1 and V2 (degrees):", angleDeg);
+    greenVectors = [];
+    } else if (op === 'area') {
+    // Calculate the area of the triangle formed by vectors V1 and V2 and display it in the f12 console
+    var crossVec = Vector3.cross(currentV1, currentV2);
+    var area = 0.5 * crossVec.magnitude();
+    console.log("Area of triangle formed by V1 and V2:", area);
+    greenVectors = [];
+    }
+    redrawScene();
+  });
+
+
+
 }
