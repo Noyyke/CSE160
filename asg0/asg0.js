@@ -6,15 +6,13 @@ function main() {
     return false; 
   } 
 
-  //400 x 400 rectangle centered horizontally
-  var rectX = window.innerWidth / 2 - 200;
+  // 400×400 black square; bitmap matches drawing area so centering the canvas centers it on the page.
+  var rectX = 0;
   var rectY = 100;
   var rectW = 400;
   var rectH = 400;
-  var uiInsetX = Math.max(0, rectX);
 
-  // Bitmap size must fit the rectangle; HTML width/height default (e.g. 400×400) clips anything outside.
-  canvas.width = rectX + rectW;
+  canvas.width = rectW;
   canvas.height = rectY + rectH;
   // Match CSS layout size to bitmap (avoids squishing when host CSS uses max-width:100% on canvas)
   canvas.style.width = canvas.width + 'px';
@@ -25,8 +23,6 @@ function main() {
   layoutRoot.id = 'layoutRoot';
   layoutRoot.style.display = 'block';
   layoutRoot.style.width = canvas.width + 'px';
-  layoutRoot.style.marginLeft = 'auto';
-  layoutRoot.style.marginRight = 'auto';
   document.body.insertBefore(layoutRoot, canvas);
   layoutRoot.appendChild(canvas);
 
@@ -78,7 +74,6 @@ function main() {
   vecBlock.style.marginTop = '10px';
   vecBlock.style.width = '100%';
   vecBlock.style.boxSizing = 'border-box';
-  vecBlock.style.paddingLeft = uiInsetX + 'px';
   layoutRoot.appendChild(vecBlock);
 
   function makeRow() {
@@ -146,7 +141,6 @@ function main() {
   opsContainer.style.marginTop = '16px';
   opsContainer.style.width = '100%';
   opsContainer.style.boxSizing = 'border-box';
-  opsContainer.style.paddingLeft = uiInsetX + 'px';
   layoutRoot.appendChild(opsContainer);
 
   var opRow = document.createElement('div');
