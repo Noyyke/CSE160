@@ -55,6 +55,11 @@ function main() {
     ctx.fillStyle = 'rgba(0, 0, 0, 1.0)';
     ctx.fillRect(rectX, rectY, rectW, rectH);
 
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(rectX, rectY, rectW, rectH);
+    ctx.clip();
+
     if (currentV1) {
       drawVector(currentV1, 'rgba(255, 0, 0, 1.0)');
     }
@@ -64,6 +69,7 @@ function main() {
     for (var gi = 0; gi < greenVectors.length; gi++) {
       drawVector(greenVectors[gi], greenColor);
     }
+    ctx.restore();
   }
 
   var vecBlock = document.createElement('div');
