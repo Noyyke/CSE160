@@ -2,7 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Change a point color</title>
+    <title>Draw Shapes</title>
+    <style>
+      .active-mode {
+        background-color: #555;
+        color: white;
+        outline: 2px solid #000;
+      }
+    </style>
   </head>
 
   <body onload="main()">
@@ -20,20 +27,31 @@
     <button type = "button" id = "point">Point</button>
     <button type = "button" id = "triangle">Triangle</button>
     <button type = "button" id = "circle">Circle</button>
+    <p>
+
+
+    <button type = "button" id = "ghost">GHOST MODE</button>
+    <p>
+    Ghost Speed <input type="range" min="1" max="100" value="10" class="slider" id="ghostSpeedSlide">
 
 
     <p>
-    Red <input type = "range" min = "0" max = "100" value = "0" class = "slider" id = "redSlide">
+    Red <input type = "range" min = "0" max = "100" value = "100" class = "slider" id = "redSlide">
     <p>
-    Green <input type = "range" min = "0" max = "100" value = "0" class = "slider" id = "greenSlide">
+    Green <input type = "range" min = "0" max = "100" value = "100" class = "slider" id = "greenSlide">
     <p>
-    Blue <input type = "range" min = "0" max = "100" value = "0" class = "slider" id = "blueSlide">
+    Blue <input type = "range" min = "0" max = "100" value = "100" class = "slider" id = "blueSlide">
+    <p>
+    Alpha <input type = "range" min = "0" max = "100" value = "100" class = "slider" id = "alphaSlide">
 
     <p>
-    Size <input type = "range" min = "5" max = "40" value = "5" class = "slider" id = "sizeSlide">
+    Size <input type = "range" min = "5" max = "40" value = "20" class = "slider" id = "sizeSlide">
     <p>
     Segments <input type = "range" min = "5" max = "25" value = "10" class = "slider" id = "segmentSlide">
     <p>
+
+    Current Color: <div id = "colorPreview" style = "display:inline-block; width:40px; height:40px; 
+                              background-color: rgb(0, 0, 0); border: 1px solid white;"></div>
   
 
 
