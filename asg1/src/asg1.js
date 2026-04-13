@@ -120,6 +120,8 @@ function addActionsFromHtmlUI() {
   document.getElementById('triangle').onclick = function() {setMode(TRIANGLE)};
   document.getElementById('circle').onclick = function() {setMode(CIRCLE)};
 
+  document.getElementById('totoro').onclick = function() {drawTotoro()};
+
   document.getElementById('ghost').onclick = function() {
     g_ghostMode = !g_ghostMode;
     document.getElementById('ghost').classList.toggle('active-mode', g_ghostMode);
@@ -139,6 +141,15 @@ function addActionsFromHtmlUI() {
   document.getElementById('segmentSlide').addEventListener('mouseup', function() {g_selectedSegments = this.value});
 
 
+}
+
+function drawTotoro() {
+  let t = new Totoro();
+  t.position = [0.0, 0.0];
+  t.color = g_selectedColor.slice();
+  t.size = g_selectedSize;
+  g_shapesList.push(t);
+  renderAllShapes();
 }
 
 function main() {
