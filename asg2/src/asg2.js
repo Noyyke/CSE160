@@ -110,7 +110,7 @@ let g_lastMouseY = 0;
 
 
 //Drag Camera Globals
-let g_sliderAngleY = 40;
+let g_sliderAngleY = 10;
 let g_dragAngleX = 0;
 let g_dragAngleY = 0;
 
@@ -525,7 +525,7 @@ function renderAllShapes() {
 
     neck1.matrix.translate(0,.6,-.3);
     neck1.matrix.rotate(180, 1,0,0);
-    neck1.matrix.rotate(30, 1,0,0);    //here
+    neck1.matrix.rotate(30, 1,0,0);
     neck1.matrix.rotate(g_neckAngle, 1,0,0);
 
     var neck1CordsMat = new Matrix4(neck1.matrix);
@@ -558,14 +558,13 @@ function renderAllShapes() {
     //Eye 1 - outer
     var eye1 = new Cube();
     eye1.color = [.2,.2,.2,1];
-    eye1.matrix = new Matrix4(head.matrix);
+    eye1.matrix = new Matrix4(headCordsMat);
 
-    eye1.matrix.translate(0,.45,.2);
-    eye1.matrix.rotate(0, 1,0,0);
+    eye1.matrix.translate(0,.13,.07);
 
     var eye1CordsMat = new Matrix4(eye1.matrix);
 
-    eye1.matrix.scale(1.03,.5,.45);
+    eye1.matrix.scale(.355,.185,.15);
 
     eye1.render();
 
@@ -575,20 +574,60 @@ function renderAllShapes() {
     //Eye 2 - inner
     var eye1 = new Cube();
     eye1.color = [.05,.05,.05,1];
-    eye1.matrix = new Matrix4(head.matrix);
+    eye1.matrix = new Matrix4(eye1CordsMat);
 
-    eye1.matrix.translate(0,.5,.2);
-    eye1.matrix.rotate(0, 1,0,0);
+    eye1.matrix.translate(0,.02,.0);
 
-    var eye1CordsMat = new Matrix4(eye1.matrix);
-
-    eye1.matrix.scale(1.04,.4,.2);
+    eye1.matrix.scale(.3551,.145,.07);
 
     eye1.render();
 
 
 
 //---------------------------------------------------------------------------------------------------
+
+
+
+
+
+    //Ear 1 - Left
+    var ear1 = new Cube();
+    ear1.color = [.85,.85,.85,1];
+    ear1.matrix = new Matrix4(headCordsMat);
+
+    ear1.matrix.translate(.155,.08,.08);
+    ear1.matrix.rotate(45, 1,0,0);
+    ear1.matrix.rotate(180, 1,0,0);
+    ear1.matrix.rotate(-5, 0,0,1);
+
+
+    ear1.matrix.scale(.06,.17,.12);
+
+    ear1.render();
+
+
+
+
+
+    //Ear 2 - Right
+    var ear2 = new Cube();
+    ear2.color = [.85,.85,.85,1];
+    ear2.matrix = new Matrix4(headCordsMat);
+
+    ear2.matrix.translate(-.155,.08,.08);
+    ear2.matrix.rotate(45, 1,0,0);
+    ear2.matrix.rotate(180, 1,0,0);
+    ear2.matrix.rotate(5, 0,0,1);
+
+
+    ear2.matrix.scale(.06,.17,.12);
+
+    ear2.render();
+
+
+
+//---------------------------------------------------------------------------------------------------
+
 
 
     //Mouth 1 - bottom jaw
@@ -598,8 +637,6 @@ function renderAllShapes() {
 
     mouth1.matrix.translate(0,.3,-.1);
     mouth1.matrix.rotate(-g_jawAngle, 1,0,0);
-    mouth1.matrix.rotate(0, 1,0,0);
-    mouth1.matrix.rotate(0, 1,0,0);
 
     var mouth1CordsMat = new Matrix4(mouth1.matrix);
 
@@ -618,9 +655,6 @@ function renderAllShapes() {
     mouth2.matrix = new Matrix4(mouth1CordsMat);
 
     mouth2.matrix.translate(0,0,0.02);
-    mouth2.matrix.rotate(0, 1,0,0);
-    mouth2.matrix.rotate(0, 1,0,0);
-    mouth2.matrix.rotate(0, 1,0,0);
 
     mouth2.matrix.scale(.17,.27,.07);
 
@@ -635,15 +669,26 @@ function renderAllShapes() {
     mouth3.matrix = new Matrix4(headCordsMat);
 
     mouth3.matrix.translate(0,.3,.05);
-    mouth3.matrix.rotate(0, 1,0,0);
-    mouth3.matrix.rotate(0, 1,0,0);
-    mouth3.matrix.rotate(0, 1,0,0);
 
     var mouth3CordsMat = new Matrix4(mouth3.matrix);
 
     mouth3.matrix.scale(.25,.3,.2);
 
     mouth3.render();    
+
+
+
+
+    //Mouth 4 - top jaw - inner
+    var mouth4 = new Cube();
+    mouth4.color = [.7,.2,.3,1.0];
+    mouth4.matrix = new Matrix4(mouth3CordsMat);
+
+    mouth4.matrix.translate(0,0,0-.0401);
+
+    mouth4.matrix.scale(.18,.26,.12);
+
+    mouth4.render();    
 
 
 
@@ -709,7 +754,40 @@ function renderAllShapes() {
 
     nose.matrix.scale(.251,.08,.08);
 
-    nose.render();        
+    nose.render();
+    
+    
+
+
+    //Nostril 1
+    var nostril1 = new Cube();
+    nostril1.color = [.1,.1,.1,1.0];
+    nostril1.matrix = new Matrix4(noseCordsMat);
+
+    nostril1.matrix.translate(.1,.05,0);
+    nostril1.matrix.rotate(0, 1,0,0);
+    nostril1.matrix.rotate(0, 1,0,0);
+    nostril1.matrix.rotate(0, 1,0,0);
+
+    nostril1.matrix.scale(.03,.03001,.06);
+
+    nostril1.render();     
+    
+    
+
+    //Nostril 2
+    var nostril2 = new Cube();
+    nostril2.color = [.1,.1,.1,1.0];
+    nostril2.matrix = new Matrix4(noseCordsMat);
+
+    nostril2.matrix.translate(-.1,.05,0);
+    nostril2.matrix.rotate(0, 1,0,0);
+    nostril2.matrix.rotate(0, 1,0,0);
+    nostril2.matrix.rotate(0, 1,0,0);
+
+    nostril2.matrix.scale(.03,.03001,.06);
+
+    nostril2.render();     
 
 
 
@@ -895,6 +973,11 @@ function renderAllShapes() {
 
 
 
+//---------------------------------------------------------------------------------------------------
+
+
+
+
     //Leg 2 - Back Right
     var leg2 = new Cube();
     leg2.color = [.9,.9,.9,1.0];
@@ -930,6 +1013,7 @@ function renderAllShapes() {
     hoof2.render();    
 
 
+//---------------------------------------------------------------------------------------------------
 
 
 
@@ -970,6 +1054,35 @@ function renderAllShapes() {
 
 
 
+    //toe 1 - Front Left - Left
+    var toe1 = new Cube();
+    toe1.color = [.5,.55,.5,1.0];
+    toe1.matrix = new Matrix4(hoof3CordsMat);
+
+    toe1.matrix.translate(-0.05,0.03,-0.08);
+
+    toe1.matrix.scale(.09,.07,.1);
+
+    toe1.render();
+
+
+
+
+    //toe 2 - Front Left - Right
+    var toe2 = new Cube();
+    toe2.color = [.5,.55,.5,1.0];
+    toe2.matrix = new Matrix4(hoof3CordsMat);
+
+    toe2.matrix.translate(0.05,0.03,-0.08);
+
+    toe2.matrix.scale(.09,.07,.1);
+
+    toe2.render();
+
+    
+//---------------------------------------------------------------------------------------------------
+
+
 
 
     //Leg 4 - Front Right
@@ -1005,6 +1118,35 @@ function renderAllShapes() {
     hoof4.matrix.scale(.21,.1,.21);
 
     hoof4.render();        
+
+
+
+
+
+    //toe 3 - Front Right - Left
+    var toe3 = new Cube();
+    toe3.color = [.5,.55,.5,1.0];
+    toe3.matrix = new Matrix4(hoof4CordsMat);
+
+    toe3.matrix.translate(-0.05,0.03,0.08);
+
+    toe3.matrix.scale(.09,.07,.1);
+
+    toe3.render();
+
+
+
+
+    //toe 4 - Front Right - Right
+    var toe4 = new Cube();
+    toe4.color = [.5,.55,.5,1.0];
+    toe4.matrix = new Matrix4(hoof4CordsMat);
+
+    toe4.matrix.translate(0.05,0.03,0.08);
+
+    toe4.matrix.scale(.09,.07,.1);
+
+    toe4.render();
 
 
 
