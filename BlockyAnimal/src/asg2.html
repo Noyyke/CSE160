@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Goat Animation</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: #1a1a2e;
+        color: #e0e0e0;
+        font-family: 'Segoe UI', sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        min-height: 100vh;
+      }
+
+      h1 {
+        font-size: 1.8em;
+        color: #a8d8ea;
+        margin-bottom: 4px;
+      }
+
+      .subtitle {
+        font-size: 0.85em;
+        color: #888;
+        margin-bottom: 12px;
+      }
+
+      #numdot {
+        font-size: 0.8em;
+        color: #888;
+        margin-bottom: 10px;
+        font-family: monospace;
+      }
+
+      canvas {
+        border: 2px solid #444;
+        border-radius: 8px;
+        display: block;
+        margin-bottom: 10px;
+      }
+
+      .hint {
+        font-size: 0.8em;
+        color: #f0a500;
+        margin-bottom: 16px;
+        font-style: italic;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 30px;
+        width: 100%;
+        max-width: 600px;
+        background: #16213e;
+        border-radius: 10px;
+        padding: 16px 24px;
+        border: 1px solid #333;
+      }
+
+      .control-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .control-row label {
+        font-size: 0.78em;
+        color: #a0b4c8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: #a8d8ea;
+        cursor: pointer;
+      }
+
+      .section-title {
+        grid-column: 1 / -1;
+        font-size: 0.7em;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #555;
+        border-top: 1px solid #333;
+        padding-top: 8px;
+        margin-top: 4px;
+      }
+
+      .top-bar {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        width: 100%;
+        max-width: 600px;
+        margin-bottom: 10px;
+        justify-content: space-between;
+      }
+
+      .anim-buttons {
+        display: flex;
+        gap: 8px;
+      }
+
+      button {
+        padding: 6px 18px;
+        border: none;
+        border-radius: 6px;
+        background: #0f3460;
+        color: #e0e0e0;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: background 0.2s;
+      }
+
+      button:hover {
+        background: #1a5276;
+      }
+
+      .active-mode {
+        background-color: #a8d8ea;
+        color: #1a1a2e;
+        font-weight: bold;
+      }
+
+      .camera-row {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+    </style>
+  </head>
+
+  <body onload="main()">
+
+    <h1>Goat Animation</h1>
+    <p class="subtitle">Nick Lafredo &nbsp;|&nbsp; nlafredo@ucsc.edu</p>
+
+    <p id="numdot">XXX</p>
+
+    <canvas id="webgl" width="500" height="500"></canvas>
+
+    <p class="hint"> Shift + Click the goat for a special animation!</p>
+
+    <div class="top-bar">
+      <div class="anim-buttons">
+        <button type="button" id="on">▶ On</button>
+        <button type="button" id="off">⏸ Off</button>
+      </div>
+    </div>
+
+    <div class="controls">
+
+      <div class="camera-row">
+        <label>Camera Angle</label>
+        <input type="range" min="0" max="360" value="0" id="angleSlide">
+      </div>
+
+      <div class="section-title">Head</div>
+
+      <div class="control-row">
+        <label>Neck Joint</label>
+        <input type="range" min="-20" max="20" value="0" id="neckSlide">
+      </div>
+
+      <div class="control-row">
+        <label>Jaw Joint</label>
+        <input type="range" min="-5" max="45" value="0" id="jawSlide">
+      </div>
+
+      <div class="control-row">
+        <label>Beard Joint 1</label>
+        <input type="range" min="-15" max="15" value="0" id="beard1Slide">
+      </div>
+
+      <div class="control-row">
+        <label>Beard Joint 2</label>
+        <input type="range" min="-15" max="15" value="0" id="beard2Slide">
+      </div>
+
+      <div class="section-title">Legs</div>
+
+      <div class="control-row">
+        <label>Front Left Leg</label>
+        <input type="range" min="-45" max="45" value="0" id="leg3Slide">
+      </div>
+
+      <div class="control-row">
+        <label>Front Right Leg</label>
+        <input type="range" min="-45" max="45" value="0" id="leg4Slide">
+      </div>
+
+      <div class="control-row">
+        <label>Back Left Leg</label>
+        <input type="range" min="-45" max="45" value="0" id="leg1Slide">
+      </div>
+
+      <div class="control-row">
+        <label>Back Right Leg</label>
+        <input type="range" min="-45" max="45" value="0" id="leg2Slide">
+      </div>
+
+      <div class="section-title">Tail</div>
+
+      <div class="control-row">
+        <label>Tail Joint 1</label>
+        <input type="range" min="-25" max="25" value="0" id="tail1Slide">
+      </div>
+
+      <div class="control-row">
+        <label>Tail Joint 2</label>
+        <input type="range" min="-25" max="25" value="0" id="tail2Slide">
+      </div>
+
+      <div class="control-row">
+        <label>Tail Joint 3</label>
+        <input type="range" min="-25" max="25" value="0" id="tail3Slide">
+      </div>
+
+    </div>
+
+    <script src="../lib/webgl-utils.js"></script>
+    <script src="../lib/webgl-debug.js"></script>
+    <script src="../lib/cuon-utils.js"></script>
+    <script src="../lib/cuon-matrix.js"></script>
+    <script src="point.js"></script>
+    <script src="triangle.js"></script>
+    <script src="circle.js"></script>
+    <script src="cube.js"></script>
+    <script src="pyramid.js"></script>
+    <script src="asg2.js"></script>
+
+  </body>
+</html>
