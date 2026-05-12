@@ -63,15 +63,39 @@ function updateAnimationAngles() {
     g_tail2Angle  = 4  * Math.sin(g_seconds * 3);
     g_tail3Angle  = 4  * Math.sin(g_seconds * 5);
   }
-  
-  function drawGoat(worldX, worldY, worldZ) {
+
+/**
+ * drawGoat(worldX, worldY, worldZ, tint, scale, rotateY)
+ *
+ * @param {number}   worldX  - world X position
+ * @param {number}   worldY  - world Y position
+ * @param {number}   worldZ  - world Z position
+ * @param {number[]} tint    - [r,g,b,a] color multiplier baked into each part's color.
+ *                             [1,1,1,1] = no change, [0.5,0.5,0.5,1] = half brightness.
+ * @param {number}   scale   - uniform scale factor. 1.0 = normal size.
+ * @param {number}   rotateY - extra rotation around Y axis in degrees, applied before
+ *                             the goat's own facing rotation.
+ */
+function drawGoat(worldX, worldY, worldZ,
+                  tint    = [1, 1, 1, 1],
+                  scale   = 1.0,
+                  rotateY = 0) {
+
+    // Helper: multiply a base color by the tint so solid-color (-2) cubes
+    // are affected. (Tint uniforms are ignored when u_whichTexture == -2.)
+    function tc(r, g, b, a) {
+      return [r * tint[0], g * tint[1], b * tint[2], a * tint[3]];
+    }
+
     var baseMat = new Matrix4();
     baseMat.setTranslate(worldX, worldY, worldZ);
+    baseMat.rotate(rotateY, 0, 1, 0);
     baseMat.rotate(g_goatAngle + 135, 0, 1, 0);  // face direction of travel
-  
+    baseMat.scale(scale, scale, scale);
+
     // Body
     var body = new Cube();
-    body.color = [.85, .85, .85, 1];
+    body.color = tc(.85, .85, .85, 1);
     body.textureNum = -2;
     body.matrix = new Matrix4(baseMat);
     body.matrix.translate(0.1, -0.3, 0.2);
@@ -84,7 +108,7 @@ function updateAnimationAngles() {
   
     // Neck
     var neck1 = new Cube();
-    neck1.color = [.9, .9, .9, 1];
+    neck1.color = tc(.9, .9, .9, 1);
     neck1.textureNum = -2;
     neck1.matrix = new Matrix4(bodyCordsMat);
     neck1.matrix.translate(0, .6, -.3);
@@ -97,7 +121,7 @@ function updateAnimationAngles() {
   
     // Head
     var head = new Cube();
-    head.color = [.9, .9, .9, 1];
+    head.color = tc(.9, .9, .9, 1);
     head.textureNum = -2;
     head.matrix = new Matrix4(neck1CordsMat);
     head.matrix.translate(0, .13, .14);
@@ -108,7 +132,7 @@ function updateAnimationAngles() {
   
     // Eye outer
     var eye1 = new Cube();
-    eye1.color = [.2, .2, .2, 1];
+    eye1.color = tc(.2, .2, .2, 1);
     eye1.textureNum = -2;
     eye1.matrix = new Matrix4(headCordsMat);
     eye1.matrix.translate(0, .13, .07);
@@ -118,7 +142,7 @@ function updateAnimationAngles() {
   
     // Eye inner
     var eye2 = new Cube();
-    eye2.color = [.05, .05, .05, 1];
+    eye2.color = tc(.05, .05, .05, 1);
     eye2.textureNum = -2;
     eye2.matrix = new Matrix4(eye1CordsMat);
     eye2.matrix.translate(0, .02, 0);
@@ -127,7 +151,7 @@ function updateAnimationAngles() {
   
     // Ear left
     var ear1 = new Cube();
-    ear1.color = [.85, .85, .85, 1];
+    ear1.color = tc(.85, .85, .85, 1);
     ear1.textureNum = -2;
     ear1.matrix = new Matrix4(headCordsMat);
     ear1.matrix.translate(.155, .08, .08);
@@ -139,7 +163,7 @@ function updateAnimationAngles() {
   
     // Ear right
     var ear2 = new Cube();
-    ear2.color = [.85, .85, .85, 1];
+    ear2.color = tc(.85, .85, .85, 1);
     ear2.textureNum = -2;
     ear2.matrix = new Matrix4(headCordsMat);
     ear2.matrix.translate(-.155, .08, .08);
@@ -151,7 +175,7 @@ function updateAnimationAngles() {
   
     // Jaw bottom
     var mouth1 = new Cube();
-    mouth1.color = [.8, .8, .8, 1];
+    mouth1.color = tc(.8, .8, .8, 1);
     mouth1.textureNum = -2;
     mouth1.matrix = new Matrix4(headCordsMat);
     mouth1.matrix.translate(0, .3, -.1);
@@ -162,7 +186,7 @@ function updateAnimationAngles() {
   
     // Jaw bottom inner
     var mouth2 = new Cube();
-    mouth2.color = [.7, .2, .3, 1];
+    mouth2.color = tc(.7, .2, .3, 1);
     mouth2.textureNum = -2;
     mouth2.matrix = new Matrix4(mouth1CordsMat);
     mouth2.matrix.translate(0, 0, 0.02);
@@ -171,7 +195,7 @@ function updateAnimationAngles() {
   
     // Jaw top
     var mouth3 = new Cube();
-    mouth3.color = [.8, .8, .8, 1];
+    mouth3.color = tc(.8, .8, .8, 1);
     mouth3.textureNum = -2;
     mouth3.matrix = new Matrix4(headCordsMat);
     mouth3.matrix.translate(0, .3, .05);
@@ -181,7 +205,7 @@ function updateAnimationAngles() {
   
     // Jaw top inner
     var mouth4 = new Cube();
-    mouth4.color = [.7, .2, .3, 1];
+    mouth4.color = tc(.7, .2, .3, 1);
     mouth4.textureNum = -2;
     mouth4.matrix = new Matrix4(mouth3CordsMat);
     mouth4.matrix.translate(0, 0, -0.0401);
@@ -190,7 +214,7 @@ function updateAnimationAngles() {
   
     // Beard 1
     var beard1 = new Cube();
-    beard1.color = [.8, .8, .8, 1];
+    beard1.color = tc(.8, .8, .8, 1);
     beard1.textureNum = -2;
     beard1.matrix = new Matrix4(mouth1CordsMat);
     beard1.matrix.translate(0, .2, 0);
@@ -204,7 +228,7 @@ function updateAnimationAngles() {
   
     // Beard 2
     var beard2 = new Cube();
-    beard2.color = [.8, .8, .8, 1];
+    beard2.color = tc(.8, .8, .8, 1);
     beard2.textureNum = -2;
     beard2.matrix = new Matrix4(beard1CordsMat);
     beard2.matrix.translate(0, .1, 0);
@@ -216,7 +240,7 @@ function updateAnimationAngles() {
   
     // Nose
     var nose = new Cube();
-    nose.color = [.5, .5, .5, 1];
+    nose.color = tc(.5, .5, .5, 1);
     nose.textureNum = -2;
     nose.matrix = new Matrix4(mouth3CordsMat);
     nose.matrix.translate(0, .23, .065);
@@ -226,7 +250,7 @@ function updateAnimationAngles() {
   
     // Nostril 1
     var nostril1 = new Cube();
-    nostril1.color = [.1, .1, .1, 1];
+    nostril1.color = tc(.1, .1, .1, 1);
     nostril1.textureNum = -2;
     nostril1.matrix = new Matrix4(noseCordsMat);
     nostril1.matrix.translate(.1, .05, 0);
@@ -235,7 +259,7 @@ function updateAnimationAngles() {
   
     // Nostril 2
     var nostril2 = new Cube();
-    nostril2.color = [.1, .1, .1, 1];
+    nostril2.color = tc(.1, .1, .1, 1);
     nostril2.textureNum = -2;
     nostril2.matrix = new Matrix4(noseCordsMat);
     nostril2.matrix.translate(-.1, .05, 0);
@@ -244,7 +268,7 @@ function updateAnimationAngles() {
   
     // Left horn 1
     var lh1 = new Cube();
-    lh1.color = [.4, .4, .4, 1];
+    lh1.color = tc(.4, .4, .4, 1);
     lh1.textureNum = -2;
     lh1.matrix = new Matrix4(headCordsMat);
     lh1.matrix.translate(0.05, 0.15, .1);
@@ -256,7 +280,7 @@ function updateAnimationAngles() {
     lh1.renderFaster();
   
     var lh2 = new Cube();
-    lh2.color = [.4, .4, .4, 1];
+    lh2.color = tc(.4, .4, .4, 1);
     lh2.textureNum = -2;
     lh2.matrix = new Matrix4(lh1Cords);
     lh2.matrix.translate(0, 0.14, 0);
@@ -268,7 +292,7 @@ function updateAnimationAngles() {
     lh2.renderFaster();
   
     var lh3 = new Cube();
-    lh3.color = [.4, .4, .4, 1];
+    lh3.color = tc(.4, .4, .4, 1);
     lh3.textureNum = -2;
     lh3.matrix = new Matrix4(lh2Cords);
     lh3.matrix.translate(0, 0.1, 0);
@@ -280,7 +304,7 @@ function updateAnimationAngles() {
     lh3.renderFaster();
   
     var lh4 = new Cube();
-    lh4.color = [.4, .4, .4, 1];
+    lh4.color = tc(.4, .4, .4, 1);
     lh4.textureNum = -2;
     lh4.matrix = new Matrix4(lh3Cords);
     lh4.matrix.translate(0, 0.1, 0);
@@ -292,7 +316,7 @@ function updateAnimationAngles() {
   
     // Right horn 1
     var rh1 = new Cube();
-    rh1.color = [.4, .4, .4, 1];
+    rh1.color = tc(.4, .4, .4, 1);
     rh1.textureNum = -2;
     rh1.matrix = new Matrix4(headCordsMat);
     rh1.matrix.translate(-0.05, 0.15, .1);
@@ -304,7 +328,7 @@ function updateAnimationAngles() {
     rh1.renderFaster();
   
     var rh2 = new Cube();
-    rh2.color = [.4, .4, .4, 1];
+    rh2.color = tc(.4, .4, .4, 1);
     rh2.textureNum = -2;
     rh2.matrix = new Matrix4(rh1Cords);
     rh2.matrix.translate(0, 0.14, 0);
@@ -316,7 +340,7 @@ function updateAnimationAngles() {
     rh2.renderFaster();
   
     var rh3 = new Cube();
-    rh3.color = [.4, .4, .4, 1];
+    rh3.color = tc(.4, .4, .4, 1);
     rh3.textureNum = -2;
     rh3.matrix = new Matrix4(rh2Cords);
     rh3.matrix.translate(0, 0.1, 0);
@@ -328,7 +352,7 @@ function updateAnimationAngles() {
     rh3.renderFaster();
   
     var rh4 = new Cube();
-    rh4.color = [.4, .4, .4, 1];
+    rh4.color = tc(.4, .4, .4, 1);
     rh4.textureNum = -2;
     rh4.matrix = new Matrix4(rh3Cords);
     rh4.matrix.translate(0, 0.1, 0);
@@ -340,7 +364,7 @@ function updateAnimationAngles() {
   
     // Leg 1 - Back Left
     var leg1 = new Cube();
-    leg1.color = [.9, .9, .9, 1];
+    leg1.color = tc(.9, .9, .9, 1);
     leg1.textureNum = -2;
     leg1.matrix = new Matrix4(bodyCordsMat);
     leg1.matrix.translate(.18, .3, .25);
@@ -354,7 +378,7 @@ function updateAnimationAngles() {
     leg1.renderFaster();
   
     var hoof1 = new Cube();
-    hoof1.color = [.5, .55, .5, 1];
+    hoof1.color = tc(.5, .55, .5, 1);
     hoof1.textureNum = -2;
     hoof1.matrix = new Matrix4(leg1Cords);
     hoof1.matrix.translate(0, .61, 0);
@@ -363,7 +387,7 @@ function updateAnimationAngles() {
   
     // Leg 2 - Back Right
     var leg2 = new Cube();
-    leg2.color = [.9, .9, .9, 1];
+    leg2.color = tc(.9, .9, .9, 1);
     leg2.textureNum = -2;
     leg2.matrix = new Matrix4(bodyCordsMat);
     leg2.matrix.translate(-.18, .3, .25);
@@ -376,7 +400,7 @@ function updateAnimationAngles() {
     leg2.renderFaster();
   
     var hoof2 = new Cube();
-    hoof2.color = [.5, .55, .5, 1];
+    hoof2.color = tc(.5, .55, .5, 1);
     hoof2.textureNum = -2;
     hoof2.matrix = new Matrix4(leg2Cords);
     hoof2.matrix.translate(0, .61, 0);
@@ -385,7 +409,7 @@ function updateAnimationAngles() {
   
     // Leg 3 - Front Left
     var leg3 = new Cube();
-    leg3.color = [.9, .9, .9, 1];
+    leg3.color = tc(.9, .9, .9, 1);
     leg3.textureNum = -2;
     leg3.matrix = new Matrix4(bodyCordsMat);
     leg3.matrix.translate(.15, .3, -.3);
@@ -399,7 +423,7 @@ function updateAnimationAngles() {
     leg3.renderFaster();
   
     var hoof3 = new Cube();
-    hoof3.color = [.5, .55, .5, 1];
+    hoof3.color = tc(.5, .55, .5, 1);
     hoof3.textureNum = -2;
     hoof3.matrix = new Matrix4(leg3Cords);
     hoof3.matrix.translate(0, .61, 0);
@@ -408,7 +432,7 @@ function updateAnimationAngles() {
     hoof3.renderFaster();
   
     var toe1 = new Cube();
-    toe1.color = [.5, .55, .5, 1];
+    toe1.color = tc(.5, .55, .5, 1);
     toe1.textureNum = -2;
     toe1.matrix = new Matrix4(hoof3Cords);
     toe1.matrix.translate(-0.05, 0.03, -0.08);
@@ -416,7 +440,7 @@ function updateAnimationAngles() {
     toe1.renderFaster();
   
     var toe2 = new Cube();
-    toe2.color = [.5, .55, .5, 1];
+    toe2.color = tc(.5, .55, .5, 1);
     toe2.textureNum = -2;
     toe2.matrix = new Matrix4(hoof3Cords);
     toe2.matrix.translate(0.05, 0.03, -0.08);
@@ -425,7 +449,7 @@ function updateAnimationAngles() {
   
     // Leg 4 - Front Right
     var leg4 = new Cube();
-    leg4.color = [.9, .9, .9, 1];
+    leg4.color = tc(.9, .9, .9, 1);
     leg4.textureNum = -2;
     leg4.matrix = new Matrix4(bodyCordsMat);
     leg4.matrix.translate(-.15, .3, -.3);
@@ -438,7 +462,7 @@ function updateAnimationAngles() {
     leg4.renderFaster();
   
     var hoof4 = new Cube();
-    hoof4.color = [.5, .55, .5, 1];
+    hoof4.color = tc(.5, .55, .5, 1);
     hoof4.textureNum = -2;
     hoof4.matrix = new Matrix4(leg4Cords);
     hoof4.matrix.translate(0, .61, 0);
@@ -447,7 +471,7 @@ function updateAnimationAngles() {
     hoof4.renderFaster();
   
     var toe3 = new Cube();
-    toe3.color = [.5, .55, .5, 1];
+    toe3.color = tc(.5, .55, .5, 1);
     toe3.textureNum = -2;
     toe3.matrix = new Matrix4(hoof4Cords);
     toe3.matrix.translate(-0.05, 0.03, 0.08);
@@ -455,7 +479,7 @@ function updateAnimationAngles() {
     toe3.renderFaster();
   
     var toe4 = new Cube();
-    toe4.color = [.5, .55, .5, 1];
+    toe4.color = tc(.5, .55, .5, 1);
     toe4.textureNum = -2;
     toe4.matrix = new Matrix4(hoof4Cords);
     toe4.matrix.translate(0.05, 0.03, 0.08);
@@ -464,7 +488,7 @@ function updateAnimationAngles() {
   
     // Spots
     var spot1 = new Cube();
-    spot1.color = [.4, .4, .4, 1];
+    spot1.color = tc(.4, .4, .4, 1);
     spot1.textureNum = -2;
     spot1.matrix = new Matrix4(bodyCordsMat);
     spot1.matrix.translate(0, .14, 0);
@@ -472,7 +496,7 @@ function updateAnimationAngles() {
     spot1.renderFaster();
   
     var spot2 = new Cube();
-    spot2.color = [.4, .4, .4, 1];
+    spot2.color = tc(.4, .4, .4, 1);
     spot2.textureNum = -2;
     spot2.matrix = new Matrix4(bodyCordsMat);
     spot2.matrix.translate(0, .35, 0.2);
@@ -481,7 +505,7 @@ function updateAnimationAngles() {
     spot2.renderFaster();
   
     var spot3 = new Cube();
-    spot3.color = [.4, .4, .4, 1];
+    spot3.color = tc(.4, .4, .4, 1);
     spot3.textureNum = -2;
     spot3.matrix = new Matrix4(bodyCordsMat);
     spot3.matrix.translate(0, .33, -0.25);
@@ -490,7 +514,7 @@ function updateAnimationAngles() {
   
     // Tail
     var tail1 = new Cube();
-    tail1.color = [.7, .7, .7, 1];
+    tail1.color = tc(.7, .7, .7, 1);
     tail1.textureNum = -2;
     tail1.matrix = new Matrix4(bodyCordsMat);
     tail1.matrix.translate(0, .45, 0.4);
@@ -501,7 +525,7 @@ function updateAnimationAngles() {
     tail1.renderFaster();
   
     var tail2 = new Cube();
-    tail2.color = [.7, .7, .7, 1];
+    tail2.color = tc(.7, .7, .7, 1);
     tail2.textureNum = -2;
     tail2.matrix = new Matrix4(tail1Cords);
     tail2.matrix.translate(0, 0.13, 0.01);
@@ -511,9 +535,9 @@ function updateAnimationAngles() {
     tail2.matrix.scale(.07, .15, .07);
     tail2.renderFaster();
   
-    // Tail tip (was Pyramid, using a small cube instead)
+    // Tail tip
     var tail3 = new Pyramid();
-    tail3.color = [.7, .7, .7, 1];
+    tail3.color = tc(.7, .7, .7, 1);
     tail3.textureNum = -2;
     tail3.matrix = new Matrix4(tail2Cords);
     tail3.matrix.translate(0, 0.12, 0);
