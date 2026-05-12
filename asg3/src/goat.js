@@ -6,7 +6,7 @@
 var g_goatX = 2;
 var g_goatZ = 2;
 var g_goatAngle = 0;      // facing direction in degrees
-var g_goatSpeed = 0.012;  // units per frame, tweak this
+var g_goatSpeed = 0.003;  // units per frame, tweak this
 
 // Waypoints — a closed loop path (world coordinates)
 // edit these to change the shape of the path
@@ -132,7 +132,7 @@ function drawGoat(worldX, worldY, worldZ,
   
     // Eye outer
     var eye1 = new Cube();
-    eye1.color = tc(.2, .2, .2, 1);
+    eye1.color = tc(.05, .05, .05, 1);
     eye1.textureNum = -2;
     eye1.matrix = new Matrix4(headCordsMat);
     eye1.matrix.translate(0, .13, .07);
@@ -142,12 +142,21 @@ function drawGoat(worldX, worldY, worldZ,
   
     // Eye inner
     var eye2 = new Cube();
-    eye2.color = tc(.05, .05, .05, 1);
+    eye2.color = tc(.45, .05, .05, 1);
     eye2.textureNum = -2;
     eye2.matrix = new Matrix4(eye1CordsMat);
     eye2.matrix.translate(0, .02, 0);
     eye2.matrix.scale(.3551, .145, .07);
     eye2.renderFaster();
+
+    // eye slit
+    var eye3 = new Cube();
+    eye3.color = tc(.05, .05, .05, 1);
+    eye3.textureNum = -2;
+    eye3.matrix = new Matrix4(eye1CordsMat);
+    eye3.matrix.translate(0, 0.07, 0);
+    eye3.matrix.scale(.3552, .025, .07);
+    eye3.renderFaster();
   
     // Ear left
     var ear1 = new Cube();

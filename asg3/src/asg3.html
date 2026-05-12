@@ -40,11 +40,50 @@
         font-family: monospace;
       }
 
+      /* Canvas wrapper so we can position the HUD relative to the canvas */
+      #canvas-wrapper {
+        position: relative;
+        margin-bottom: 10px;
+      }
+
       canvas {
         border: 2px solid #444;
         border-radius: 8px;
         display: block;
-        margin-bottom: 10px;
+      }
+
+      /* Pages HUD — top-right corner of the canvas */
+      #pages-hud {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        background: rgba(0,0,0,0.55);
+        color: #f5e97a;
+        font-family: 'Segoe UI', monospace, sans-serif;
+        font-size: 1em;
+        font-weight: bold;
+        padding: 6px 12px;
+        border-radius: 6px;
+        pointer-events: none;
+        user-select: none;
+        display: none;           /* hidden until survival mode */
+        letter-spacing: 0.5px;
+      }
+
+      /* Page pickup hint — centre bottom of canvas */
+      #pickup-hint {
+        position: absolute;
+        bottom: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.6);
+        color: #fff;
+        font-size: 0.85em;
+        padding: 5px 14px;
+        border-radius: 6px;
+        pointer-events: none;
+        user-select: none;
+        display: none;
       }
 
       .hint {
@@ -54,91 +93,49 @@
         font-style: italic;
       }
 
-      .controls {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px 30px;
-        width: 100%;
-        max-width: 600px;
-        background: #16213e;
-        border-radius: 10px;
-        padding: 16px 24px;
-        border: 1px solid #333;
-      }
-
-      .control-row {
+      /* Mode toggle row */
+      .mode-row {
         display: flex;
-        flex-direction: column;
-        gap: 4px;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
       }
 
-      .control-row label {
-        font-size: 0.78em;
+      .mode-row span {
+        font-size: 0.85em;
         color: #a0b4c8;
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
 
-      input[type="range"] {
-        width: 100%;
-        accent-color: #a8d8ea;
-        cursor: pointer;
-      }
-
-      .section-title {
-        grid-column: 1 / -1;
-        font-size: 0.7em;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #555;
-        border-top: 1px solid #333;
-        padding-top: 8px;
-        margin-top: 4px;
-      }
-
-      .top-bar {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        width: 100%;
-        max-width: 600px;
-        margin-bottom: 10px;
-        justify-content: space-between;
-      }
-
-      .anim-buttons {
-        display: flex;
-        gap: 8px;
-      }
-
-      button {
-        padding: 6px 18px;
-        border: none;
-        border-radius: 6px;
+      .mode-btn {
+        padding: 7px 22px;
+        border: 2px solid #a8d8ea;
+        border-radius: 8px;
         background: #0f3460;
-        color: #e0e0e0;
+        color: #a8d8ea;
         cursor: pointer;
-        font-size: 0.9em;
-        transition: background 0.2s;
+        font-size: 0.95em;
+        font-weight: bold;
+        transition: background 0.2s, color 0.2s;
+        letter-spacing: 0.5px;
       }
 
-      button:hover {
+      .mode-btn:hover {
         background: #1a5276;
       }
 
-      .active-mode {
-        background-color: #a8d8ea;
-        color: #1a1a2e;
-        font-weight: bold;
+      .mode-btn.survival-active {
+        background: #7b2d00;
+        border-color: #f0a500;
+        color: #f0a500;
       }
 
-      .camera-row {
-        grid-column: 1 / -1;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
+      .mode-btn.creative-active {
+        background: #0a3d0a;
+        border-color: #5dbb63;
+        color: #5dbb63;
       }
-
 
       #crosshair {
         position: fixed;
@@ -159,17 +156,28 @@
   <body onload="main()">
 
     <h1>Blocky World</h1>
-    <p class="subtitle">Nick Lafredo &nbsp;|&nbsp; nlafredo@ucsc.edu</p>
+    <p class="subtitle"></p>
 
     <p id="numdot">XXX</p>
 
-    <canvas id="webgl" width="1000" height="1000"></canvas>
+    <!-- Mode toggle -->
+    <div class="mode-row">
+      <span>Mode:</span>
+      <button id="modeBtn" class="mode-btn creative-active" onclick="toggleMode()">Creative</button>
+    </div>
+
+    <!-- Canvas + HUD overlay -->
+    <div id="canvas-wrapper">
+      <canvas id="webgl" width="1000" height="1000"></canvas>
+
+      <!-- Pages collected counter (survival only) -->
+      <div id="pages-hud">📄 Pages: 0 / 8</div>
+
+      <!-- "Press E to pick up" hint -->
+      <div id="pickup-hint">[E] Pick up page</div>
+    </div>
 
     <div id="crosshair">+</div>
-
-
-    
-    
 
     <script src="../lib/webgl-utils.js"></script>
     <script src="../lib/webgl-debug.js"></script>
@@ -185,6 +193,7 @@
     <script src="sphere.js"></script>
     <script src="goat.js"></script>
     <script src="tree.js"></script>
+    <script src="audio.js"></script>
     <script src="asg3.js"></script>
 
   </body>
