@@ -138,13 +138,12 @@
       }
 
       #crosshair {
-        position: fixed;
-        top: 49%;
+        position: absolute;
+        top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         color: white;
-        font-size: 30px;
-        font-weight: bold;
+        font-size: 28px;
         pointer-events: none;
         user-select: none;
         text-shadow: 0 0 3px black, 0 0 3px black;
@@ -166,6 +165,14 @@
       <button id="modeBtn" class="mode-btn creative-active" onclick="toggleMode()">Creative</button>
     </div>
 
+    <div class="mode-row">
+      <span>Brightness:</span>
+      <input type="range" id="brightnessSlider" min="10" max="200" value="30" step="5"
+        oninput="updateBrightness(this.value)"
+        style="width:160px; accent-color:#a8d8ea; cursor:pointer;">
+      <span id="brightnessVal" style="font-size:0.85em; color:#a8d8ea; min-width:38px;">100%</span>
+    </div>
+
     <!-- Canvas + HUD overlay -->
     <div id="canvas-wrapper">
       <canvas id="webgl" width="1000" height="1000"></canvas>
@@ -175,9 +182,11 @@
 
       <!-- "Press E to pick up" hint -->
       <div id="pickup-hint">[E] Pick up page</div>
+
+      <div id="crosshair">+</div>
+
     </div>
 
-    <div id="crosshair">+</div>
 
     <script src="../lib/webgl-utils.js"></script>
     <script src="../lib/webgl-debug.js"></script>

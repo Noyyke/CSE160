@@ -1,4 +1,4 @@
-// audio.js — Web Audio API sound system
+// audio.js 
 
 const Audio = {
     ctx: null,
@@ -8,7 +8,7 @@ const Audio = {
     isWalking: false,
     isRunning: false,
   
-    // Call this once on first user interaction (pointer lock click)
+    // Call this once
     init() {
       if (this.ctx) return;
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -22,6 +22,7 @@ const Audio = {
         run:        '../sounds/footstep_run.mp3',
         jumpscare:  '../sounds/jumpscare.mp3',
         ambient:    '../sounds/ambient.mp3',
+        flashlight: '../sounds/flashlight.mp3',
       };
       for (var key in files) {
         this._load(key, files[key]);
@@ -37,7 +38,7 @@ const Audio = {
         .catch(e => console.warn('Audio load failed:', url, e));
     },
   
-    // Play a sound once at given volume (0-1)
+    // Play sound once at volume (0-1)
     play(name, volume = 1.0, loop = false) {
       if (!this.ctx || !this.sounds[name]) return null;
       var gain = this.ctx.createGain();
@@ -52,14 +53,14 @@ const Audio = {
       return src;
     },
   
-    // ── Ambient music ──────────────────────────────────────────
+    // ── Ambient music ────
     startAmbient(volume = 0.3) {
       if (!this.ctx || !this.sounds['ambient']) {
         // Retry once loaded
         setTimeout(() => this.startAmbient(volume), 1000);
         return;
       }
-      if (this.ambientSource) return; // already playing
+      if (this.ambientSource) return; 
   
       var gain = this.ctx.createGain();
       gain.gain.value = volume;
@@ -80,7 +81,7 @@ const Audio = {
       }
     },
   
-    // Fade ambient volume (e.g. during jumpscare)
+    // Fade ambient volume
     setAmbientVolume(vol, fadeTimeSecs = 0.5) {
       if (!this._ambientGain) return;
       this._ambientGain.gain.linearRampToValueAtTime(
@@ -106,7 +107,7 @@ updateFootsteps(walking, running) {
     return;
   }
 
-  // Don't stack — only start a new chain if nothing is playing
+  // start a new chain if nothing is playing
   if (this._footstepPlaying) return;
   this._playNextFootstep();
 },
@@ -136,13 +137,13 @@ updateFootsteps(walking, running) {
     src.connect(gain);
 
     var self = this;
-    // Wait for the sound to finish, then schedule the next step after the gap
+    // Wait for sound to finish, then next step after the gap
     src.onended = function() {
         if (!self.isWalking && !self.isRunning) {
         self._footstepPlaying = false;
         return;
         }
-        // Gap between steps (interval minus the clip duration, floored at 0)
+        // Gap between steps 
         var clipDur  = buf.duration * 1000;
         var gapMs    = Math.max(0, interval - clipDur);
         self._footstepTimeout = setTimeout(function() {
@@ -171,5 +172,11 @@ updateFootsteps(walking, running) {
       setTimeout(function() {
         self.setAmbientVolume(0.3, 2.0); // fade ambient back in after scare
       }, 5000);
+    },
+
+
+    // Flashlight audio
+    playFlashlight() {
+      this.play('flashlight', 0.3);
     },
   };

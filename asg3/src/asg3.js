@@ -1,6 +1,6 @@
 //asg3.js
 
-//Nick Lafredo &nbsp;|&nbsp; nlafredo@ucsc.edu
+//
 
 // Vertex shader program
 var VSHADER_SOURCE = `
@@ -10,21 +10,24 @@ var VSHADER_SOURCE = `
   attribute float a_Shade;
   varying vec2 v_UV;
   varying float v_Shade;
+  varying vec3 v_WorldPos;
   uniform mat4 u_ModelMatrix;
   uniform mat4 u_GlobalRotateMatrix;
   uniform mat4 u_ViewMatrix;
   uniform mat4 u_ProjectionMatrix;
   void main() {
-    gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_GlobalRotateMatrix * u_ModelMatrix * a_Position;
+    vec4 worldPos = u_GlobalRotateMatrix * u_ModelMatrix * a_Position;
+    v_WorldPos = worldPos.xyz;
+    gl_Position = u_ProjectionMatrix * u_ViewMatrix * worldPos;
     v_UV = a_UV;
     v_Shade = a_Shade;
   }`
- 
-// Fragment shader program
+
 var FSHADER_SOURCE = `
   precision mediump float;
   varying vec2 v_UV;
   varying float v_Shade;
+  varying vec3 v_WorldPos;
   uniform vec4 u_FragColor;
   uniform vec4 u_TintColor;
   uniform sampler2D u_Sampler0;
@@ -32,6 +35,11 @@ var FSHADER_SOURCE = `
   uniform sampler2D u_Sampler2;
   uniform sampler2D u_Sampler3;
   uniform int u_whichTexture;
+  uniform int u_flashlight;
+  uniform vec3 u_FlashPos;
+  uniform vec3 u_FlashDir;
+  uniform float u_FlashCutoff;   // cos of cone half-angle
+  uniform float u_FlashOuter;    // cos of outer cone (softer edge)
   void main() {
     vec4 baseColor;
     if (u_whichTexture == -2) {
@@ -49,7 +57,28 @@ var FSHADER_SOURCE = `
     } else {
         baseColor = vec4(1,.2,.2,1);
     }
-    gl_FragColor = vec4(baseColor.rgb * v_Shade, baseColor.a);
+
+    vec3 lit = baseColor.rgb * v_Shade;
+
+    if (u_flashlight == 1) {
+      vec3 toFrag    = v_WorldPos - u_FlashPos;
+      float dist     = length(toFrag);
+      vec3 toFragDir = toFrag / dist;
+      float cosAngle = dot(toFragDir, u_FlashDir);
+
+      // Cone check: inside inner cone = full light, between inner/outer = smooth falloff
+      float intensity = smoothstep(u_FlashOuter, u_FlashCutoff, cosAngle);
+
+      // Distance attenuation — light falls off with square of distance
+      float attenuation = 1.0 / (1.0 + 0.15 * dist + 0.08 * dist * dist);
+
+      intensity *= attenuation;
+
+      // Add flashlight contribution on top of existing shading
+      lit += baseColor.rgb * intensity * 20.;
+    }
+
+    gl_FragColor = vec4(lit, baseColor.a);
   }`
  
  
@@ -110,6 +139,13 @@ let g_beard1Angle = 0, g_beard2Angle = 0;
 let g_leg1Angle = 0, g_leg2Angle = 0, g_leg3Angle = 0, g_leg4Angle = 0;
 let g_tail1Angle = 0, g_tail2Angle = 0, g_tail3Angle = 0;
  
+
+//Flashlight Globals
+let u_flashlight;
+let u_FlashPos;
+let u_FlashDir;
+let u_FlashCutoff;
+let u_FlashOuter;
 // ─── Mode ───────────────────────────────────────────────────────────────────
  
 // 'creative' or 'survival'
@@ -125,7 +161,17 @@ function toggleMode() {
     enterCreative();
   }
 }
+
+function updateBrightness(val) {
+  canvas.style.filter = 'brightness(' + val + '%)';
+  document.getElementById('brightnessVal').textContent = val + '%';
+}
  
+
+function getRandomFloat(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
 function enterCreative() {
   g_gameMode = 'creative';
   var btn = document.getElementById('modeBtn');
@@ -239,6 +285,10 @@ const TREE_DEFS = [
   [-8,   0, 330], // 33
   [ 14,  7,  85], // 34
 ];
+
+const TREE_SCALES = TREE_DEFS.map(function() {
+  return 2.0 + Math.random() * 2.0;  // range 2.0 – 4.0
+});
  
 // ─── Pages ──────────────────────────────────────────────────────────────────
  
@@ -247,16 +297,13 @@ const PAGE_PICKUP_DIST   = 2.5;
 const PAGE_HIGHLIGHT_DIST = 6.0;
 const PAGE_COUNT = 8;
  
-// Each page: world position (set by resetPages), collected flag
 let g_pageObjects = [];
  
-// Pick 8 random trees and place a page at each trunk base.
-// Page floats slightly above ground near the trunk.
+// 8 random trees, page at each
 function resetPages() {
   g_pagesCollected = 0;
   g_pageObjects = [];
  
-  // Shuffle tree indices and pick first 8
   var indices = TREE_DEFS.map(function(_, i) { return i; });
   for (var i = indices.length - 1; i > 0; i--) {
     var j = Math.floor(Math.random() * (i + 1));
@@ -266,7 +313,6 @@ function resetPages() {
  
   for (var k = 0; k < PAGE_COUNT; k++) {
     var td = TREE_DEFS[chosen[k]];
-    // Offset slightly from trunk center so it's visible
     g_pageObjects.push({
       wx: td[0] + 0.3,
       wy: 0.9,
@@ -366,13 +412,15 @@ function drawPages(highlightIdx) {
   }
 }
  
-// ─── Jumpscare ───────────────────────────────────────────────────────────────
+// ─── Jumpscare ────
  
 let g_jumpscare       = false;
 let g_jumpscareStart  = 0;
-const JUMPSCARE_DUR   = 5.0; // seconds
- 
-// Slenderman head pan animation angle (driven during jumpscare)
+const JUMPSCARE_START_DIST  = 18.0; 
+const JUMPSCARE_END_DIST    =  2.0; 
+const JUMPSCARE_FLASH_COUNT =  5; 
+const JUMPSCARE_DUR         =  5.0; 
+
 let g_slenderHeadAngle = 0;
  
 function triggerJumpscare() {
@@ -381,7 +429,7 @@ function triggerJumpscare() {
   g_slenderHeadAngle = 0;
   Audio.playJumpscare();
  
-  // Flash screen white briefly via overlay div
+  // Flash screen white 
   var ov = document.getElementById('jumpscare-overlay');
   if (ov) {
     ov.style.opacity = '1';
@@ -392,134 +440,162 @@ function triggerJumpscare() {
   }
 }
  
-// Draw the slenderman figure right in front of the camera.
-// Built entirely from Cube segments so no new assets are needed.
+// Draw slenderman in front of camera
 function drawSlenderman() {
   if (!g_jumpscare) return;
- 
+
   var elapsed = g_seconds - g_jumpscareStart;
   if (elapsed > JUMPSCARE_DUR) {
     g_jumpscare = false;
-    // Reset pages for another round
+    // Clear overlay
+    var ov = document.getElementById('jumpscare-overlay');
+    if (ov) { ov.style.opacity = '0'; }
     resetPages();
     updatePagesHUD();
     return;
   }
- 
-  // Position: 1.5 units directly in front of camera, at eye level
+
   var forward = g_camera.at.sub(g_camera.eye).normalized();
   var ex = g_camera.eye.elements[0];
   var ey = g_camera.eye.elements[1];
   var ez = g_camera.eye.elements[2];
+
+  // Flash / step 
+  // Divide duration 
+  // white glash
+  // slenderman draw
+  var phaseDur   = JUMPSCARE_DUR / JUMPSCARE_FLASH_COUNT;
+  var phaseIdx   = Math.floor(elapsed / phaseDur);
+  phaseIdx       = Math.min(phaseIdx, JUMPSCARE_FLASH_COUNT - 1);
+  var phaseT     = (elapsed % phaseDur) / phaseDur;
+
+  var flashPhase = phaseT < 0.15;   // white flash
+
  
-  var dist = 3.5;
+  var t    = phaseIdx / Math.max(1, JUMPSCARE_FLASH_COUNT - 1);
+  var dist = JUMPSCARE_START_DIST + (JUMPSCARE_END_DIST - JUMPSCARE_START_DIST) * t;
+
   var sx = ex + forward.elements[0] * dist;
-  var sy = ey - 1.0; // feet at floor level relative to eye
+  var sy = ey - 1.0;
   var sz = ez + forward.elements[2] * dist;
- 
-  // Head pan: rapid left-right snap, two full sweeps per second
-  g_slenderHeadAngle = 55 * Math.sin(elapsed * Math.PI * 3.0);
- 
-  // Flicker intensity: grows over duration for dread effect
+
+  // Head sway 
+  var swaySpeed = 2.0 + t * 4.0;
+  var swayAmp   = 20.0 + t * 45.0;
+  g_slenderHeadAngle = swayAmp * Math.sin(elapsed * Math.PI * swaySpeed);
+
   var flicker = 0.7 + 0.3 * Math.sin(elapsed * 47.3);
-  var fade    = Math.min(1.0, elapsed * 2.0); // fade in first 0.5s
- 
-  // Slenderman color: near-black with slight flicker
-  var v = 0.04 * flicker * fade;
+  var fade    = Math.min(1.0, elapsed * 4.0);
+  var v = flashPhase ? 0.0 : (0.04 * flicker * fade);
   var sc = [v, v, v, 1.0];
- 
-  // Base matrix: face the camera (rotate around Y to look at player)
+
+  // Overlay 
+  var ov = document.getElementById('jumpscare-overlay');
+  if (ov) {
+    if (flashPhase) {
+      // white flash
+      ov.style.transition = 'none';
+      ov.style.background = 'rgba(255,255,255,1.0)';
+      ov.style.opacity = '1';
+    } else {
+      // red pulse between flashes
+      var pulse = 0.25 + 0.15 * Math.sin(elapsed * 8.0);
+      ov.style.transition = 'none';
+      ov.style.background = 'rgba(10,0,0,' + (pulse * fade) + ')';
+      ov.style.opacity = '1';
+    }
+  }
+
+  // draw body
+  if (flashPhase) return;
+
   var facingAngle = Math.atan2(forward.elements[0], forward.elements[2]) * 180 / Math.PI + 180;
- 
-  var base = new Matrix4();
-  base.setTranslate(sx, sy, sz);
-  base.rotate(facingAngle, 0, 1, 0);
- 
-  // ── LEGS ──
-  // Left leg
-  var ll = new Cube();
-  ll.textureNum = -2; ll.color = sc;
-  ll.matrix = new Matrix4(base);
-  ll.matrix.translate(-0.16, 0, -0.06);
-  ll.matrix.scale(0.12, 1.0, 0.12);
-  ll.renderFaster();
- 
-  // Right leg
-  var rl = new Cube();
-  rl.textureNum = -2; rl.color = sc;
-  rl.matrix = new Matrix4(base);
-  rl.matrix.translate(0.06, 0, -0.06);
-  rl.matrix.scale(0.12, 1.0, 0.12);
-  rl.renderFaster();
- 
-  // ── TORSO ──
+
+  var baseMat = new Matrix4();
+  baseMat.setTranslate(sx, sy, sz);
+  baseMat.rotate(facingAngle, 0, 1, 0);
+
+  // left leg
+  var leftLeg = new Cube();
+  leftLeg.textureNum = -2; leftLeg.color = sc;
+  leftLeg.matrix = new Matrix4(baseMat);
+  leftLeg.matrix.translate(-0.1, 0, -0.06);
+  var leftLegCords = new Matrix4(leftLeg.matrix);
+  leftLeg.matrix.scale(0.12, 1.4, 0.12);
+  leftLeg.renderFaster();
+
+  // right leg
+  var rightLeg = new Cube();
+  rightLeg.textureNum = -2; rightLeg.color = sc;
+  rightLeg.matrix = new Matrix4(baseMat);
+  rightLeg.matrix.translate(0.1, 0, -0.06);
+  var rightLegCords = new Matrix4(rightLeg.matrix);
+  rightLeg.matrix.scale(0.12, 1.4, 0.12);
+  rightLeg.renderFaster();
+
+  // torso
   var torso = new Cube();
   torso.textureNum = -2; torso.color = sc;
-  torso.matrix = new Matrix4(base);
-  torso.matrix.translate(-0.07, 1.0, -0.08);
-  torso.matrix.scale(.5, 0.9, 0.16);
+  torso.matrix = new Matrix4(baseMat);
+  torso.matrix.translate(0, 1.2, -0.08); 
+  var torsoCords = new Matrix4(torso.matrix);
+  torso.matrix.scale(0.44, 1.2, 0.16);
   torso.renderFaster();
- 
-  // ── LEFT ARM (long, drooping) ──
-  var la = new Cube();
-  la.textureNum = -2; la.color = sc;
-  la.matrix = new Matrix4(base);
-  la.matrix.translate(0.15, 1.9, -0.04);
-  la.matrix.rotate(8, 0, 0, 1);   // droop outward
-  la.matrix.rotate(180, 1, 0, 0);   // droop outward
-  la.matrix.scale(0.08, 1.1, 0.08);
-  la.renderFaster();
- 
-  // ── RIGHT ARM ──
-  var ra = new Cube();
-  ra.textureNum = -2; ra.color = sc;
-  ra.matrix = new Matrix4(base);
-  ra.matrix.translate(-.5, 0.8, -0.04);
-  ra.matrix.rotate(-8, 0, 0, 1);
-  la.matrix.rotate(180, 1, 0, 0);   // droop outward
-  ra.matrix.scale(0.08, 1.1, 0.08);
-  ra.renderFaster();
- 
   
-  // ── NECK (pivots at its base, tilts toward shoulders on Z) ──
-  var neckBaseMat = new Matrix4(base);
-  neckBaseMat.translate(0, 1.9, 0);                          // base of neck in world
-  neckBaseMat.rotate(g_slenderHeadAngle, 0, 0, 1);           // tilt on Z (shoulder roll)
-
+  // left arm
+  var leftArm = new Cube();
+  leftArm.textureNum = -2; leftArm.color = sc;
+  leftArm.matrix = new Matrix4(torsoCords);
+  leftArm.matrix.translate(-0.2, 1.2, 0.04); 
+  leftArm.matrix.rotate(-5, 0, 0, 1); 
+  leftArm.matrix.rotate(180, 1, 0, 0); 
+  var leftArmCords = new Matrix4(leftArm.matrix);
+  leftArm.matrix.scale(0.08, 1.6, 0.08);
+  leftArm.renderFaster();
+  
+  //right arm
+  var rightArm = new Cube();
+  rightArm.textureNum = -2; rightArm.color = sc;
+  rightArm.matrix = new Matrix4(torsoCords);
+  rightArm.matrix.translate(0.2, 1.2, 0.04);
+  rightArm.matrix.rotate(5, 0, 0, 1);
+  rightArm.matrix.rotate(180, 1, 0, 0);
+  var rightArmCords = new Matrix4(rightArm.matrix);
+  rightArm.matrix.scale(0.08, 1.6, 0.08);
+  rightArm.renderFaster();
+  
+  // neck
   var neck = new Cube();
   neck.textureNum = -2; neck.color = sc;
-  neck.matrix = new Matrix4(neckBaseMat);
-  neck.matrix.translate(-0.1, 0, -0.04);
-  neck.matrix.scale(0.08, 0.22, 0.08);                       // grows upward from base
+  neck.matrix = new Matrix4(torsoCords);
+  neck.matrix.translate(0, 1.1, 0.1);
+  neck.matrix.rotate(g_slenderHeadAngle, 0, 0, 1);
+  var neckCords = new Matrix4(neck.matrix);
+  neck.matrix.scale(0.08, 0.22, 0.08);
   neck.renderFaster();
 
-  // ── HEAD (extends the neck's tilt + a little extra) ──
-  var headBase = new Matrix4(base);
-  headBase.translate(0, 1.9, 0);                             // same base pivot as neck
-  headBase.rotate(g_slenderHeadAngle * 1.35, 0, 0, 1);      // slightly more tilt than neck
-  headBase.translate(0, 0.22, 0);                            // sit on top of neck
-
+  // head
   var head = new Cube();
-  head.textureNum = -2; head.color = [1,1,1,1];
-  head.matrix = new Matrix4(headBase);
-  head.matrix.translate(-0.13, 0, -0.13);
-  head.matrix.scale(0.2, 0.38, 0.2);
+  head.textureNum = -2; head.color = [1, 1, 1, 1];
+  head.matrix = new Matrix4(neckCords);
+  head.matrix.translate(0, 0.22, -0.1); 
+  head.matrix.rotate(g_slenderHeadAngle * 0.35, 0, 0, 1); 
+  var headCords = new Matrix4(head.matrix);
+  head.matrix.scale(0.2, 0.28, 0.2);
   head.renderFaster();
 
 
- 
-  // Vignette darkening overlay via 2D canvas overlay
+  // Vignette overlay
   var ov = document.getElementById('jumpscare-overlay');
   if (ov) {
-    // Pulse the overlay red-black for the jumpscare
     var pulse = 0.18 + 0.12 * Math.sin(elapsed * 8.0);
     ov.style.transition = 'none';
     ov.style.background = 'rgba(10,0,0,' + (pulse * fade) + ')';
     ov.style.opacity = '1';
   }
-}
+} 
  
-// ─── WebGL setup ────────────────────────────────────────────────────────────
+// ─── WebGL setup ─────
  
 function setupWebGL() {
   canvas = document.getElementById('webgl');
@@ -552,6 +628,11 @@ function connectVariablesToGLSL() {
   u_Sampler2           = gl.getUniformLocation(gl.program, 'u_Sampler2');
   u_Sampler3           = gl.getUniformLocation(gl.program, 'u_Sampler3');
   u_whichTexture       = gl.getUniformLocation(gl.program, 'u_whichTexture');
+  u_flashlight         = gl.getUniformLocation(gl.program, 'u_flashlight');
+  u_FlashPos           = gl.getUniformLocation(gl.program, 'u_FlashPos');
+  u_FlashDir           = gl.getUniformLocation(gl.program, 'u_FlashDir');
+  u_FlashCutoff        = gl.getUniformLocation(gl.program, 'u_FlashCutoff');
+  u_FlashOuter         = gl.getUniformLocation(gl.program, 'u_FlashOuter');
 }
  
 function setDefaultShade() {
@@ -563,13 +644,13 @@ function enableShade() {
   gl.enableVertexAttribArray(a_Shade);
 }
  
-// ─── Camera angles ──────────────────────────────────────────────────────────
+// Camera angles
  
 let g_globalAngleX = 0;
 let g_globalAngleY = 0;
 let g_globalAngleZ = 0;
  
-// ─── Textures ───────────────────────────────────────────────────────────────
+// Textures
  
 function initTextures() {
   var image = new Image();
@@ -629,7 +710,7 @@ function sendImageToTEXTURE2(image) {
   gl.uniform1i(u_Sampler2, 2);
 }
  
-// ─── Collision ──────────────────────────────────────────────────────────────
+// Collision
  
 function isBlocked(x, y, z) {
   var mapX   = Math.floor(x + 16);
@@ -642,7 +723,7 @@ function isBlocked(x, y, z) {
  
 function isOnFloor(y) { return y < 0.25; }
  
-// ─── Input ──────────────────────────────────────────────────────────────────
+// input
  
 let g_pausedTime = 0;
 let g_pauseStart = null;
@@ -652,7 +733,7 @@ function addActionsFromHtmlUI() {
     var key = ev.key.toLowerCase();
     if (ev.ctrlKey && ['w', 't', 'r', 'n'].includes(key)) ev.preventDefault();
     g_keys[key] = true;
-    if (key === 'f') g_flashlight = !g_flashlight;
+    if (key === 'f') {g_flashlight = !g_flashlight; Audio.playFlashlight();}
     if (key === 'e') tryPickupPage();
     if ([' ', 'w', 'a', 's', 'd'].includes(key)) ev.preventDefault();
   };
@@ -689,7 +770,6 @@ function handleKeys() {
     Audio.stopFootsteps();
   }
 
-  // Remove the duplicate speed line — keep only this one:
   var speed = isRunning ? g_camera.speed * 1.5 : g_camera.speed;
 
   if (g_keys['w']) g_camera.moveForward(speed);
@@ -711,7 +791,7 @@ function handleKeys() {
   }
 }
  
-// ─── Mouse ──────────────────────────────────────────────────────────────────
+// mouse
  
 function mouseHandler() {
   canvas.onmousedown = function(ev) {
@@ -767,21 +847,23 @@ function mouseHandler() {
   });
 }
  
-// ─── Flashlight ─────────────────────────────────────────────────────────────
+// flashlight
  
 function createFlashlightTexture() {
-  var size = 256;
+  var size = 512;
   var c = document.createElement('canvas');
   c.width = size; c.height = size;
   var ctx = c.getContext('2d');
-  var gradient = ctx.createRadialGradient(size/2,size/2,0, size/2,size/2,size/2);
-  gradient.addColorStop(0,   'rgba(255,255,255,0.3)');
-  gradient.addColorStop(0.6, 'rgba(255,255,255,0.3)');
-  gradient.addColorStop(0.7, 'rgba(255,255,255,0.4)');
-  gradient.addColorStop(0.8, 'rgba(255,255,255,0)');
+
+  var gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  gradient.addColorStop(0,    'rgba(255,255,255,0.18)'); // soft center
+  gradient.addColorStop(0.4,  'rgba(255,255,255,0.12)');
+  gradient.addColorStop(0.7,  'rgba(255,255,255,0.05)');
+  gradient.addColorStop(1.0,  'rgba(255,255,255,0.0)');  // transparent rim
+
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
- 
+
   var texture = gl.createTexture();
   gl.activeTexture(gl.TEXTURE3);
   gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -794,7 +876,7 @@ function createFlashlightTexture() {
   gl.uniform1i(u_Sampler3, 3);
 }
  
-// ─── Main ───────────────────────────────────────────────────────────────────
+// main
  
 function main() {
   g_camera = new Camera();
@@ -808,11 +890,11 @@ function main() {
   mouseHandler();
   initTextures();
   buildWorld();
+  updateBrightness(30);
 
-  //g_jumpscare = true;
+  g_jumpscare = true;
   
  
-  // Ensure jumpscare overlay exists in DOM
   var ov = document.getElementById('jumpscare-overlay');
   if (!ov) {
     ov = document.createElement('div');
@@ -830,7 +912,7 @@ function main() {
   requestAnimationFrame(tick);
 }
  
-// ─── Tick ───────────────────────────────────────────────────────────────────
+// tick
  
 var g_startTime = performance.now() / 1000.0;
 var g_seconds   = performance.now() / 1000.0 - g_startTime;
@@ -846,7 +928,7 @@ function tick() {
   requestAnimationFrame(tick);
 }
  
-// ─── Ray casting ────────────────────────────────────────────────────────────
+// ray casting
  
 function castRay() {
   var forward  = g_camera.at.sub(g_camera.eye).normalized();
@@ -907,7 +989,7 @@ function drawHighlight(result) {
   gl.depthMask(true);
 }
  
-// ─── Render ─────────────────────────────────────────────────────────────────
+// render
  
 function renderAllShapes() {
   var startTime = performance.now();
@@ -931,6 +1013,24 @@ function renderAllShapes() {
  
   g_rayResult = castRay();
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  // Flashlight
+  if (g_flashlight) {
+    var forward = g_camera.at.sub(g_camera.eye).normalized();
+    gl.uniform1i(u_flashlight, 1);
+    gl.uniform3f(u_FlashPos,
+      g_camera.eye.elements[0],
+      g_camera.eye.elements[1],
+      g_camera.eye.elements[2]);
+    gl.uniform3f(u_FlashDir,
+      forward.elements[0],
+      forward.elements[1],
+      forward.elements[2]);
+    gl.uniform1f(u_FlashCutoff, Math.cos(0.25));  // inner cone
+    gl.uniform1f(u_FlashOuter,  Math.cos(0.35));  //outer cone
+  } else {
+    gl.uniform1i(u_flashlight, 0);
+  }
  
   // Floor
   if (!g_floorCube) {
@@ -961,10 +1061,10 @@ function renderAllShapes() {
  
   for (var ti = 0; ti < TREE_DEFS.length; ti++) {
     var td = TREE_DEFS[ti];
-    drawTree(td[0], -0.75, td[1], [.2,.2,.2,1], 3, td[2]);
+    drawTree(td[0], -0.75, td[1], [.2,.2,.2,1], TREE_SCALES[ti], td[2]);
   }
  
-  // Pages — survival only, handled inside drawPages
+  // Pages survival only, handled inside drawPages
   var hoveredPageIdx = -1;
   if (g_gameMode === 'survival' && !g_jumpscare) {
     hoveredPageIdx = castRayToPages();
@@ -981,41 +1081,13 @@ function renderAllShapes() {
  
   drawPages(hoveredPageIdx);
  
-  // Slenderman jumpscare (drawn on top of everything)
+  // Slenderman jumpscare 
   drawSlenderman();
  
-  // Block highlight (creative only, not during jumpscare)
+  // Block highlight
   if (!g_jumpscare) drawHighlight(g_rayResult);
  
-  // Flashlight
-  if (g_flashlight) {
-    var forward = g_camera.at.sub(g_camera.eye).normalized();
-    var right   = forward.cross(g_camera.up).normalized();
-    var up      = right.cross(forward).normalized();
-    var dist2   = 0.5;
-    var cx = g_camera.eye.elements[0] + forward.elements[0] * dist2;
-    var cy = g_camera.eye.elements[1] + forward.elements[1] * dist2;
-    var cz = g_camera.eye.elements[2] + forward.elements[2] * dist2;
- 
-    var light = new cornerCube();
-    light.textureNum = 3;
-    light.tint = [.6,.6,.6,0.1];
-    light.matrix.translate(cx, cy, cz);
-    var e = light.matrix.elements;
-    e[0]=right.elements[0];    e[1]=right.elements[1];    e[2]=right.elements[2];
-    e[4]=up.elements[0];       e[5]=up.elements[1];       e[6]=up.elements[2];
-    e[8]=-forward.elements[0]; e[9]=-forward.elements[1]; e[10]=-forward.elements[2];
-    light.matrix.scale(0.35, 0.35, 0.001);
-    light.matrix.translate(-0.4, -0.6, 0);
- 
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-    gl.depthMask(false);
-    gl.depthFunc(gl.ALWAYS);
-    light.render();
-    gl.depthFunc(gl.LESS);
-    gl.depthMask(true);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  }
+
  
   // Clear overlay when not in jumpscare
   if (!g_jumpscare) {

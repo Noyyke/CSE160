@@ -1,6 +1,6 @@
 // tree.js
-// Dead horror-style tree built from Cube segments
-// All branches pivot from bottom-center for joint-based animation
+// Dead horror style tree built from Cube segments
+// All branches pivot from bottom center
 
 // Animation globals
 let g_treeSway    = 0;
@@ -13,7 +13,7 @@ function updateTreeAnimation() {
     g_branch2Sway = 2.5 * Math.sin(g_seconds * 1.1 + 1.2);
 }
 
-// ── Reusable cube instance — avoids allocating ~25 Cubes × 15 trees per frame ──
+// Reusable cube 
 let _treeCube = null;
 
 function _tc(r, g, b, tint) {

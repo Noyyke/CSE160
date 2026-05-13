@@ -27,7 +27,7 @@ class Sphere {
                 let theta1 = (slice / this.slices) * 2 * Math.PI;
                 let theta2 = ((slice + 1) / this.slices) * 2 * Math.PI;
 
-                // 4 corners of this quad
+                // 4 corners of quad
                 let x1 = Math.sin(phi1) * Math.cos(theta1);
                 let y1 = Math.cos(phi1);
                 let z1 = Math.sin(phi1) * Math.sin(theta1);

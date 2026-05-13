@@ -67,22 +67,19 @@ function updateAnimationAngles() {
 /**
  * drawGoat(worldX, worldY, worldZ, tint, scale, rotateY)
  *
- * @param {number}   worldX  - world X position
- * @param {number}   worldY  - world Y position
- * @param {number}   worldZ  - world Z position
- * @param {number[]} tint    - [r,g,b,a] color multiplier baked into each part's color.
- *                             [1,1,1,1] = no change, [0.5,0.5,0.5,1] = half brightness.
- * @param {number}   scale   - uniform scale factor. 1.0 = normal size.
- * @param {number}   rotateY - extra rotation around Y axis in degrees, applied before
- *                             the goat's own facing rotation.
+ * @param {number}   worldX 
+ * @param {number}   worldY
+ * @param {number}   worldZ
+ * @param {number[]} tint 
+ * @param {number}   scale
+ * @param {number}   rotateY
  */
 function drawGoat(worldX, worldY, worldZ,
                   tint    = [1, 1, 1, 1],
                   scale   = 1.0,
                   rotateY = 0) {
 
-    // Helper: multiply a base color by the tint so solid-color (-2) cubes
-    // are affected. (Tint uniforms are ignored when u_whichTexture == -2.)
+    //multiply base color by the tint so solidcolor (-2) cubes are affected
     function tc(r, g, b, a) {
       return [r * tint[0], g * tint[1], b * tint[2], a * tint[3]];
     }
