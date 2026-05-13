@@ -166,6 +166,19 @@ function updateBrightness(val) {
   canvas.style.filter = 'brightness(' + val + '%)';
   document.getElementById('brightnessVal').textContent = val + '%';
 }
+
+function toggleFullscreen() {
+  var el = document.documentElement; // fullscreen the whole page
+  // or use: var el = canvas;        // fullscreen just the canvas
+
+  if (!document.fullscreenElement) {
+    el.requestFullscreen().catch(function(err) {
+      console.warn('Fullscreen request failed:', err);
+    });
+  } else {
+    document.exitFullscreen();
+  }
+}
  
 
 function getRandomFloat(min, max) {
@@ -418,8 +431,8 @@ let g_jumpscare       = false;
 let g_jumpscareStart  = 0;
 const JUMPSCARE_START_DIST  = 18.0; 
 const JUMPSCARE_END_DIST    =  2.0; 
-const JUMPSCARE_FLASH_COUNT =  5; 
-const JUMPSCARE_DUR         =  5.0; 
+const JUMPSCARE_FLASH_COUNT =  4; 
+const JUMPSCARE_DUR         =  3.0; 
 
 let g_slenderHeadAngle = 0;
  
@@ -736,6 +749,7 @@ function addActionsFromHtmlUI() {
     if (key === 'f') {g_flashlight = !g_flashlight; Audio.playFlashlight();}
     if (key === 'e') tryPickupPage();
     if ([' ', 'w', 'a', 's', 'd'].includes(key)) ev.preventDefault();
+    if (key === 'f11' || (key === 'enter' && ev.altKey)) toggleFullscreen();
   };
  
   document.onkeyup = function(ev) {
@@ -747,13 +761,23 @@ function addActionsFromHtmlUI() {
   document.addEventListener('pointerlockchange', function() {
     g_keys = {};
     if (document.pointerLockElement === canvas) {
+      var skipFrames = 3;  // skip first few events, browsers vary
       document.onmousemove = function(ev) {
-        g_camera.panLeft(-ev.movementX * 0.2);
-        g_camera.panUp(-ev.movementY * 0.2);
+        if (skipFrames > 0) { skipFrames--; return; }
+        // Also clamp per-frame delta to catch any remaining spikes
+        var dx = Math.max(-50, Math.min(50, ev.movementX));
+        var dy = Math.max(-50, Math.min(50, ev.movementY));
+        g_camera.panLeft(-dx * 0.2);
+        g_camera.panUp(-dy * 0.2);
       };
     } else {
       document.onmousemove = null;
     }
+  });
+
+  document.addEventListener('fullscreenchange', function() {
+    var btn = document.getElementById('fullscreenBtn');
+    if (btn) btn.textContent = document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
   });
 }
  
@@ -895,16 +919,19 @@ function main() {
   //g_jumpscare = true;
   
  
+ 
   var ov = document.getElementById('jumpscare-overlay');
   if (!ov) {
     ov = document.createElement('div');
     ov.id = 'jumpscare-overlay';
     ov.style.cssText = [
-      'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
+      'position:absolute', 'top:0', 'left:0', 'width:100%', 'height:100%',
       'pointer-events:none', 'opacity:0', 'z-index:999',
       'background:rgba(10,0,0,0)'
     ].join(';');
-    document.body.appendChild(ov);
+  
+    var wrapper = document.getElementById('canvas-wrapper');
+    (wrapper || document.body).appendChild(ov);
   }
  
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -1089,11 +1116,7 @@ function renderAllShapes() {
  
 
  
-  // Clear overlay when not in jumpscare
-  if (!g_jumpscare) {
-    var ov = document.getElementById('jumpscare-overlay');
-    if (ov) { ov.style.opacity = '0'; }
-  }
+
  
   var duration = performance.now() - startTime;
   g_fpsBuffer.push(1000 / duration);

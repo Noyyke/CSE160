@@ -40,52 +40,6 @@
         font-family: monospace;
       }
 
-      /* Canvas wrapper so we can position the HUD relative to the canvas */
-      #canvas-wrapper {
-        position: relative;
-        margin-bottom: 10px;
-      }
-
-      canvas {
-        border: 2px solid #444;
-        border-radius: 8px;
-        display: block;
-      }
-
-      /* Pages HUD — top-right corner of the canvas */
-      #pages-hud {
-        position: absolute;
-        top: 12px;
-        right: 16px;
-        background: rgba(0,0,0,0.55);
-        color: #f5e97a;
-        font-family: 'Segoe UI', monospace, sans-serif;
-        font-size: 1em;
-        font-weight: bold;
-        padding: 6px 12px;
-        border-radius: 6px;
-        pointer-events: none;
-        user-select: none;
-        display: none;           /* hidden until survival mode */
-        letter-spacing: 0.5px;
-      }
-
-      /* Page pickup hint — centre bottom of canvas */
-      #pickup-hint {
-        position: absolute;
-        bottom: 60px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0,0,0,0.6);
-        color: #fff;
-        font-size: 0.85em;
-        padding: 5px 14px;
-        border-radius: 6px;
-        pointer-events: none;
-        user-select: none;
-        display: none;
-      }
-
       .hint {
         font-size: 0.8em;
         color: #f0a500;
@@ -121,9 +75,7 @@
         letter-spacing: 0.5px;
       }
 
-      .mode-btn:hover {
-        background: #1a5276;
-      }
+      .mode-btn:hover { background: #1a5276; }
 
       .mode-btn.survival-active {
         background: #7b2d00;
@@ -135,6 +87,52 @@
         background: #0a3d0a;
         border-color: #5dbb63;
         color: #5dbb63;
+      }
+
+      /* Canvas wrapper — sized by JS to maintain 16:9 */
+      #canvas-wrapper {
+        position: relative;
+        margin-bottom: 10px;
+        background: black;
+        /* width/height set by resizeCanvas() */
+      }
+
+      #webgl {
+        display: block;
+        /* pixel dimensions set by resizeCanvas() */
+      }
+
+      /* HUD overlays — positioned relative to #canvas-wrapper */
+      #pages-hud {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        background: rgba(0,0,0,0.55);
+        color: #f5e97a;
+        font-family: 'Segoe UI', monospace, sans-serif;
+        font-size: 1em;
+        font-weight: bold;
+        padding: 6px 12px;
+        border-radius: 6px;
+        pointer-events: none;
+        user-select: none;
+        display: none;
+        letter-spacing: 0.5px;
+      }
+
+      #pickup-hint {
+        position: absolute;
+        bottom: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.6);
+        color: #fff;
+        font-size: 0.85em;
+        padding: 5px 14px;
+        border-radius: 6px;
+        pointer-events: none;
+        user-select: none;
+        display: none;
       }
 
       #crosshair {
@@ -149,6 +147,33 @@
         text-shadow: 0 0 3px black, 0 0 3px black;
         line-height: 1;
       }
+
+      #fullscreenBtn {
+        padding: 7px 20px;
+        border: 2px solid #a8d8ea;
+        border-radius: 8px;
+        background: #0f3460;
+        color: #a8d8ea;
+        cursor: pointer;
+        font-size: 0.9em;
+        font-weight: bold;
+        margin-top: 4px;
+        transition: background 0.2s;
+      }
+
+      #fullscreenBtn:hover { background: #1a5276; }
+
+      /* When fullscreen, make the wrapper fill the screen */
+      #canvas-wrapper:fullscreen,
+      #canvas-wrapper:-webkit-full-screen {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: black;
+        width: 100vw !important;
+        height: 100vh !important;
+        margin: 0;
+      }
     </style>
   </head>
 
@@ -156,10 +181,8 @@
 
     <h1>Blocky World</h1>
     <p class="subtitle">Nick Lafredo &nbsp;|&nbsp; nlafredo@ucsc.edu</p>
-
     <p id="numdot">XXX</p>
 
-    <!-- Mode toggle -->
     <div class="mode-row">
       <span>Mode:</span>
       <button id="modeBtn" class="mode-btn creative-active" onclick="toggleMode()">Creative</button>
@@ -170,23 +193,18 @@
       <input type="range" id="brightnessSlider" min="10" max="200" value="30" step="5"
         oninput="updateBrightness(this.value)"
         style="width:160px; accent-color:#a8d8ea; cursor:pointer;">
-      <span id="brightnessVal" style="font-size:0.85em; color:#a8d8ea; min-width:38px;">100%</span>
+      <span id="brightnessVal" style="font-size:0.85em; color:#a8d8ea; min-width:38px;">30%</span>
     </div>
 
-    <!-- Canvas + HUD overlay -->
     <div id="canvas-wrapper">
-      <canvas id="webgl" width="1000" height="1000"></canvas>
+      <canvas id="webgl" width="960" height="540"></canvas>
 
-      <!-- Pages collected counter (survival only) -->
       <div id="pages-hud">📄 Pages: 0 / 8</div>
-
-      <!-- "Press E to pick up" hint -->
       <div id="pickup-hint">[E] Pick up page</div>
-
       <div id="crosshair">+</div>
-
     </div>
 
+    <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
 
     <script src="../lib/webgl-utils.js"></script>
     <script src="../lib/webgl-debug.js"></script>
@@ -204,6 +222,58 @@
     <script src="tree.js"></script>
     <script src="audio.js"></script>
     <script src="asg3.js"></script>
+
+    <script>
+      const ASPECT = 16 / 9;
+
+      function resizeCanvas() {
+        var wrapper = document.getElementById('canvas-wrapper');
+        var isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+
+        var vw = isFS ? window.innerWidth  : Math.min(window.innerWidth - 40, 960);
+        var vh = isFS ? window.innerHeight : window.innerHeight * 0.6;
+
+        var w, h;
+        if (vw / vh > ASPECT) {
+          h = Math.floor(vh);
+          w = Math.floor(h * ASPECT);
+        } else {
+          w = Math.floor(vw);
+          h = Math.floor(w / ASPECT);
+        }
+
+        var c = document.getElementById('webgl');
+        c.style.width  = w + 'px';
+        c.style.height = h + 'px';
+        wrapper.style.width  = w + 'px';
+        wrapper.style.height = h + 'px';
+      }
+
+      function toggleFullscreen() {
+        var wrapper = document.getElementById('canvas-wrapper');
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          var req = wrapper.requestFullscreen || wrapper.webkitRequestFullscreen;
+          if (req) req.call(wrapper);
+        } else {
+          var ex = document.exitFullscreen || document.webkitExitFullscreen;
+          if (ex) ex.call(document);
+        }
+      }
+
+      document.addEventListener('fullscreenchange', function() {
+        resizeCanvas();
+        var btn = document.getElementById('fullscreenBtn');
+        btn.textContent = document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+      });
+      document.addEventListener('webkitfullscreenchange', function() {
+        resizeCanvas();
+        var btn = document.getElementById('fullscreenBtn');
+        btn.textContent = document.webkitFullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+      });
+
+      window.addEventListener('resize', resizeCanvas);
+      window.addEventListener('load', resizeCanvas);
+    </script>
 
   </body>
 </html>

@@ -120,7 +120,7 @@ updateFootsteps(walking, running) {
     if (!this.ctx) { this._footstepPlaying = false; return; }
 
     var sound    = this.isRunning ? 'run'  : 'walk';
-    var vol      = this.isRunning ? 0.6    : 0.35;
+    var vol      = this.isRunning ? 0.5    : 0.25;
     var interval = this.isRunning ? 320    : 520;   // ms gap between steps
 
     var buf = this.sounds[sound];

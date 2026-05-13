@@ -73,31 +73,39 @@ class Camera {
       }
     }
   
-    panLeft(angle) {
-      var d   = this.at.sub(this.eye);
-      var rot = new Matrix4().setRotate(angle, this.up.elements[0], this.up.elements[1], this.up.elements[2]);
-      this.at = this.eye.add(rot.multiplyVector3(d));
+    panLeft(degrees) {
+      var forward = this.at.sub(this.eye).normalized();
+      var rotMat = new Matrix4();
+      rotMat.setRotate(degrees, 0, 1, 0);  // always world Y
+    
+      var newForward = rotMat.multiplyVector3(forward);
+      this.at.elements[0] = this.eye.elements[0] + newForward.elements[0];
+      this.at.elements[1] = this.eye.elements[1] + newForward.elements[1];
+      this.at.elements[2] = this.eye.elements[2] + newForward.elements[2];
     }
     
     panRight(angle) {
       this.panLeft(-angle);
     }
     
-    panUp(angle) {
-      var d       = this.at.sub(this.eye).normalized();
-      var right   = d.cross(this.up).normalized();
+    panUp(degrees) {
+      // Get current pitch angle
+      var forward = this.at.sub(this.eye).normalized();
+      var currentPitch = Math.asin(forward.elements[1]) * 180 / Math.PI;
     
-      // get current pitch angle (-90 to 90)
-      var currentPitch = Math.asin(d.elements[1]); // in radians
-      var maxPitch     = 0.99 * (Math.PI / 2);     // just under 90 degrees
+      // Clamp: don't apply rotation if it would push past ±89°
+      var newPitch = currentPitch + degrees;
+      if (newPitch > 89.0 || newPitch < -89.0) return;
     
-      // clamp the incoming angle so we never exceed the limit
-      var newPitch = currentPitch + (angle * Math.PI / 180);
-      if (newPitch > maxPitch)  angle = (maxPitch - currentPitch) * (180 / Math.PI);
-      if (newPitch < -maxPitch) angle = (-maxPitch - currentPitch) * (180 / Math.PI);
+      // Rotate around the camera's local right axis (not world Y)
+      var right = forward.cross(this.up).normalized();
+      var rotMat = new Matrix4();
+      rotMat.setRotate(degrees, right.elements[0], right.elements[1], right.elements[2]);
     
-      var rot = new Matrix4().setRotate(angle, right.elements[0], right.elements[1], right.elements[2]);
-      this.at = this.eye.add(rot.multiplyVector3(this.at.sub(this.eye)));
+      var newForward = rotMat.multiplyVector3(forward);
+      this.at.elements[0] = this.eye.elements[0] + newForward.elements[0];
+      this.at.elements[1] = this.eye.elements[1] + newForward.elements[1];
+      this.at.elements[2] = this.eye.elements[2] + newForward.elements[2];
     }
     
     panDown(angle) {
