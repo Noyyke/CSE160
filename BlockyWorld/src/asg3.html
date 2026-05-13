@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Goat Animation</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: #1a1a2e;
+        color: #e0e0e0;
+        font-family: 'Segoe UI', sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        min-height: 100vh;
+      }
+
+      h1 {
+        font-size: 1.8em;
+        color: #a8d8ea;
+        margin-bottom: 4px;
+      }
+
+      .subtitle {
+        font-size: 0.85em;
+        color: #888;
+        margin-bottom: 12px;
+      }
+
+      #numdot {
+        font-size: 0.8em;
+        color: #888;
+        margin-bottom: 10px;
+        font-family: monospace;
+      }
+
+      /* Canvas wrapper so we can position the HUD relative to the canvas */
+      #canvas-wrapper {
+        position: relative;
+        margin-bottom: 10px;
+      }
+
+      canvas {
+        border: 2px solid #444;
+        border-radius: 8px;
+        display: block;
+      }
+
+      /* Pages HUD — top-right corner of the canvas */
+      #pages-hud {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        background: rgba(0,0,0,0.55);
+        color: #f5e97a;
+        font-family: 'Segoe UI', monospace, sans-serif;
+        font-size: 1em;
+        font-weight: bold;
+        padding: 6px 12px;
+        border-radius: 6px;
+        pointer-events: none;
+        user-select: none;
+        display: none;           /* hidden until survival mode */
+        letter-spacing: 0.5px;
+      }
+
+      /* Page pickup hint — centre bottom of canvas */
+      #pickup-hint {
+        position: absolute;
+        bottom: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.6);
+        color: #fff;
+        font-size: 0.85em;
+        padding: 5px 14px;
+        border-radius: 6px;
+        pointer-events: none;
+        user-select: none;
+        display: none;
+      }
+
+      .hint {
+        font-size: 0.8em;
+        color: #f0a500;
+        margin-bottom: 16px;
+        font-style: italic;
+      }
+
+      /* Mode toggle row */
+      .mode-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .mode-row span {
+        font-size: 0.85em;
+        color: #a0b4c8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .mode-btn {
+        padding: 7px 22px;
+        border: 2px solid #a8d8ea;
+        border-radius: 8px;
+        background: #0f3460;
+        color: #a8d8ea;
+        cursor: pointer;
+        font-size: 0.95em;
+        font-weight: bold;
+        transition: background 0.2s, color 0.2s;
+        letter-spacing: 0.5px;
+      }
+
+      .mode-btn:hover {
+        background: #1a5276;
+      }
+
+      .mode-btn.survival-active {
+        background: #7b2d00;
+        border-color: #f0a500;
+        color: #f0a500;
+      }
+
+      .mode-btn.creative-active {
+        background: #0a3d0a;
+        border-color: #5dbb63;
+        color: #5dbb63;
+      }
+
+      #crosshair {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 28px;
+        pointer-events: none;
+        user-select: none;
+        text-shadow: 0 0 3px black, 0 0 3px black;
+        line-height: 1;
+      }
+    </style>
+  </head>
+
+  <body onload="main()">
+
+    <h1>Blocky World</h1>
+    <p class="subtitle">Nick Lafredo &nbsp;|&nbsp; nlafredo@ucsc.edu</p>
+
+    <p id="numdot">XXX</p>
+
+    <!-- Mode toggle -->
+    <div class="mode-row">
+      <span>Mode:</span>
+      <button id="modeBtn" class="mode-btn creative-active" onclick="toggleMode()">Creative</button>
+    </div>
+
+    <div class="mode-row">
+      <span>Brightness:</span>
+      <input type="range" id="brightnessSlider" min="10" max="200" value="30" step="5"
+        oninput="updateBrightness(this.value)"
+        style="width:160px; accent-color:#a8d8ea; cursor:pointer;">
+      <span id="brightnessVal" style="font-size:0.85em; color:#a8d8ea; min-width:38px;">100%</span>
+    </div>
+
+    <!-- Canvas + HUD overlay -->
+    <div id="canvas-wrapper">
+      <canvas id="webgl" width="1000" height="1000"></canvas>
+
+      <!-- Pages collected counter (survival only) -->
+      <div id="pages-hud">📄 Pages: 0 / 8</div>
+
+      <!-- "Press E to pick up" hint -->
+      <div id="pickup-hint">[E] Pick up page</div>
+
+      <div id="crosshair">+</div>
+
+    </div>
+
+
+    <script src="../lib/webgl-utils.js"></script>
+    <script src="../lib/webgl-debug.js"></script>
+    <script src="../lib/cuon-utils.js"></script>
+    <script src="../lib/cuon-matrix.js"></script>
+    <script src="point.js"></script>
+    <script src="triangle.js"></script>
+    <script src="circle.js"></script>
+    <script src="cube.js"></script>
+    <script src="corner_cube.js"></script>
+    <script src="pyramid.js"></script>
+    <script src="camera.js"></script>
+    <script src="sphere.js"></script>
+    <script src="goat.js"></script>
+    <script src="tree.js"></script>
+    <script src="audio.js"></script>
+    <script src="asg3.js"></script>
+
+  </body>
+</html>
