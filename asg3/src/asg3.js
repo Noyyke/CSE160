@@ -916,7 +916,7 @@ function main() {
   buildWorld();
   updateBrightness(30);
 
-  g_jumpscare = true;
+  //g_jumpscare = true;
   
  
  
