@@ -135,6 +135,8 @@ var g_spotOn   = false;
 var g_lightPos    = [2.0, 3.0, 2.0];
 var g_lightColor  = [1.0, 1.0, 1.0];
 var g_lightAnimOn = true;
+var g_lightVisible = true;
+var g_pointLightOn = true;
 
 var g_spotPos    = [0.0, 6.0, 0.0];
 var g_spotDir    = [0.0, -1.0, 0.0];
@@ -379,11 +381,33 @@ function updateLight() {
   if (sz) sz.value = g_lightPos[2];
 }
 
+function toggleLightVisible() {
+  g_lightVisible = !g_lightVisible;
+  var btn = document.getElementById('btnLightVisible');
+  btn.textContent = 'Marker: ' + (g_lightVisible ? 'On' : 'Off');
+  btn.classList.toggle('active', g_lightVisible);
+}
+
+function setPointLightOn() {
+  g_pointLightOn = true;
+  document.getElementById('btnPointOn') .classList.add   ('active');
+  document.getElementById('btnPointOff').classList.remove('active');
+}
+
+function setPointLightOff() {
+  g_pointLightOn = false;
+  document.getElementById('btnPointOff').classList.add   ('active');
+  document.getElementById('btnPointOn') .classList.remove('active');
+}
+
 // ─── Render helpers ───────────────────────────────────────────────────────────
 
 function _uploadLightUniforms() {
   gl.uniform3fv(u_LightPos,   g_lightPos);
-  gl.uniform3fv(u_LightColor, g_lightColor);
+  gl.uniform3f(u_LightColor,
+    g_pointLightOn ? g_lightColor[0] : 0.0,
+    g_pointLightOn ? g_lightColor[1] : 0.0,
+    g_pointLightOn ? g_lightColor[2] : 0.0);
   gl.uniform3f (u_CameraPos,
     g_camera.eye.elements[0],
     g_camera.eye.elements[1],
@@ -481,15 +505,17 @@ function renderAllShapes() {
   drawGoat(g_goatX, 0.3, g_goatZ, [1, 1, 1, 1], 1.6, 0);
 
   // ── Light marker (always bright, lighting off) ────────────────────────────
-  _lightsOff();
-  g_lightCube.color = [g_lightColor[0], g_lightColor[1], g_lightColor[2], 1.0];
-  g_lightCube.textureNum = g_normalOn ? -3 : -2;   // ← add this line
-  g_lightCube.matrix = new Matrix4();
-  g_lightCube.matrix.translate(
-    g_lightPos[0] - 0.1, g_lightPos[1] - 0.1, g_lightPos[2] - 0.1);
-  g_lightCube.matrix.scale(0.2, 0.2, 0.2);
-  g_lightCube.renderFaster();
-  _lightsRestore();
+  if (g_lightVisible) {
+    _lightsOff();
+    g_lightCube.color = [g_lightColor[0], g_lightColor[1], g_lightColor[2], 1.0];
+    g_lightCube.textureNum = g_normalOn ? -3 : -2;
+    g_lightCube.matrix = new Matrix4();
+    g_lightCube.matrix.translate(
+      g_lightPos[0] - 0.1, g_lightPos[1] - 0.1, g_lightPos[2] - 0.1);
+    g_lightCube.matrix.scale(0.2, 0.2, 0.2);
+    g_lightCube.renderFaster();
+    _lightsRestore();
+  }
 
   // ── FPS ───────────────────────────────────────────────────────────────────
   var dur = performance.now() - t0;
