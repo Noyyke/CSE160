@@ -2,121 +2,424 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Three</title>
+    <title>Neon Rhythm — Three.js</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
+      *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+
+      :root {
+        --cyan:   #00ffff;
+        --pink:   #ff00aa;
+        --green:  #00ff88;
+        --yellow: #ffcc00;
+        --dark:   #04000f;
+        --panel:  rgba(4,0,20,0.88);
+      }
 
       body {
-        background: #e8e4d8;
-        color: #333;
-        font-family: 'Segoe UI', sans-serif;
+        background: #04000f;
+        color: #ccc;
+        font-family: 'Share Tech Mono', monospace;
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 20px;
+        padding: 16px 16px 24px;
         min-height: 100vh;
+        overflow-x: hidden;
       }
 
-      h1 { font-size: 1.6em; color: #3a5a3a; margin-bottom: 4px; letter-spacing: 1px; }
-      .subtitle { font-size: 0.82em; color: #777; margin-bottom: 6px; }
-      #numdot { font-size: 0.78em; color: #999; margin-bottom: 10px; font-family: monospace; }
+      /* ── Header ── */
+      .header {
+        width: 100%;
+        max-width: 960px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(0,255,255,0.2);
+      }
+      .header-left h1 {
+        font-family: 'Orbitron', monospace;
+        font-size: 1.8em;
+        font-weight: 900;
+        letter-spacing: 4px;
+        background: linear-gradient(90deg, var(--cyan), var(--pink));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1;
+      }
+      .header-left .subtitle {
+        font-size: 0.72em;
+        color: #667;
+        margin-top:4px;
+        letter-spacing: 1px;
+      }
+      #numdot {
+        font-size: 0.68em;
+        color: #334;
+        font-family: 'Share Tech Mono', monospace;
+        text-align: right;
+      }
 
-      /* ── Panel ───────────────────────────────────────────────────────── */
+      /* ── Control Panel ── */
       .panel {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
         justify-content: center;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
         width: 100%;
         max-width: 960px;
       }
-
       .ctrl-group {
-        background: #f5f2ea;
-        border: 1px solid #ccc;
+        background: rgba(0,0,40,0.7);
+        border: 1px solid rgba(0,255,255,0.18);
         border-radius: 8px;
-        padding: 7px 11px;
+        padding: 8px 14px;
         display: flex;
         flex-direction: column;
-        gap: 5px;
-        min-width: 170px;
+        gap: 6px;
+        min-width: 160px;
+        box-shadow: 0 0 12px rgba(0,255,255,0.05);
       }
       .ctrl-group label {
-        font-size: 0.72em;
-        font-weight: bold;
-        color: #3a5a3a;
+        font-family: 'Orbitron', monospace;
+        font-size: 0.62em;
+        font-weight: 700;
+        color: var(--cyan);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 1px;
       }
       .row {
         display: flex;
         align-items: center;
         gap: 6px;
-        font-size: 0.81em;
-        color: #555;
+        font-size: 0.78em;
+        color: #8ab;
       }
-      input[type=range] { flex: 1; accent-color: #3a5a3a; cursor: pointer; }
-
-      .toggle-btn {
-        padding: 4px 11px;
-        border: 2px solid #aaa;
-        border-radius: 6px;
-        background: #f0ede4;
-        color: #555;
+      input[type=range] {
+        flex: 1;
+        accent-color: var(--cyan);
         cursor: pointer;
+        height: 4px;
+      }
+      .toggle-btn {
+        padding: 4px 12px;
+        border: 1px solid rgba(0,255,255,0.3);
+        border-radius: 5px;
+        background: rgba(0,0,30,0.8);
+        color: #8ab;
+        cursor: pointer;
+        font-family: 'Share Tech Mono', monospace;
         font-size: 0.8em;
         font-weight: bold;
-        transition: background .15s, border-color .15s, color .15s;
+        transition: all .15s;
         white-space: nowrap;
       }
-      .toggle-btn:hover { background: #e0ddd4; }
+      .toggle-btn:hover { background: rgba(0,255,255,0.1); color:var(--cyan); border-color:var(--cyan); }
       .toggle-btn.active {
-        background: #3a5a3a;
-        border-color: #3a5a3a;
-        color: #fff;
+        background: linear-gradient(135deg, rgba(0,200,200,0.25), rgba(0,80,120,0.4));
+        border-color: var(--cyan);
+        color: var(--cyan);
+        box-shadow: 0 0 8px rgba(0,255,255,0.3);
       }
 
-      /* ── Canvas ──────────────────────────────────────────────────────── */
+      /* ── Canvas wrapper ── */
       #canvas-wrapper {
         position: relative;
         margin-bottom: 10px;
         background: black;
+        border: 1px solid rgba(0,255,255,0.12);
+        box-shadow: 0 0 40px rgba(0,255,255,0.08), 0 0 80px rgba(255,0,170,0.05);
       }
       #webgl { display: block; }
+
+      /* ── Crosshair ── */
       #crosshair {
-        position: absolute; top: 50%; left: 50%;
+        position: absolute; top:50%; left:50%;
         transform: translate(-50%,-50%);
-        color: white; font-size: 26px;
+        color: rgba(255,255,255,0.5);
+        font-size: 20px;
         pointer-events: none; user-select: none;
-        text-shadow: 0 0 3px black; line-height: 1;
+        line-height: 1;
       }
+
+      /* ── Hint bar ── */
       #hint {
-        position: absolute; bottom: 12px; left: 50%;
+        position: absolute; bottom:10px; left:50%;
         transform: translateX(-50%);
-        background: rgba(0,0,0,.45);
-        color: #eee; font-size: 0.78em;
-        padding: 4px 12px; border-radius: 5px;
+        background: rgba(0,0,0,0.55);
+        color: #aac; font-size: 0.72em;
+        padding: 4px 14px; border-radius: 5px;
         pointer-events: none; user-select: none;
         white-space: nowrap;
+        border: 1px solid rgba(0,255,255,0.1);
+        font-family: 'Share Tech Mono', monospace;
       }
-      #fullscreenBtn {
-        padding: 7px 20px;
-        border: 2px solid #3a5a3a; border-radius: 8px;
-        background: #f0ede4; color: #3a5a3a;
-        cursor: pointer; font-size: 0.9em; font-weight: bold;
-        margin-top: 4px; transition: background .2s;
-      }
-      #fullscreenBtn:hover { background: #d4e8d4; }
 
+      /* ── Fullscreen button ── */
+      #fullscreenBtn {
+        padding: 7px 22px;
+        border: 1px solid rgba(0,255,255,0.3);
+        border-radius: 7px;
+        background: rgba(0,0,30,0.8);
+        color: var(--cyan);
+        cursor: pointer;
+        font-family: 'Orbitron', monospace;
+        font-size: 0.8em;
+        font-weight: 700;
+        letter-spacing: 1px;
+        margin-top: 4px;
+        transition: all .2s;
+      }
+      #fullscreenBtn:hover {
+        background: rgba(0,255,255,0.1);
+        box-shadow: 0 0 12px rgba(0,255,255,0.2);
+      }
+
+      /* ── HUD overlay (game mode) ── */
+      #hud { display: none; pointer-events: none; }
+
+      /* Score + combo (top) */
+      #hud-score-area {
+        position: absolute; top: 12px; left: 0; right: 0;
+        display: flex; justify-content: space-between; padding: 0 16px;
+      }
+      #hud-score {
+        font-family: 'Orbitron', monospace;
+        font-size: 1.5em; font-weight: 900;
+        color: var(--cyan);
+        text-shadow: 0 0 12px var(--cyan);
+        letter-spacing: 2px;
+      }
+      #hud-combo {
+        font-family: 'Orbitron', monospace;
+        font-size: 1.4em; font-weight: 700;
+        color: var(--yellow);
+        text-shadow: 0 0 12px var(--yellow);
+        letter-spacing: 1px;
+      }
+
+      /* Lane key labels (bottom) */
+      #hud-keys {
+        position: absolute; bottom: 28px;
+        left: 50%; transform: translateX(-50%);
+        display: flex; gap: 8px;
+      }
+      .key-pad {
+        width: 44px; height: 44px;
+        border-radius: 8px;
+        border: 2px solid rgba(255,255,255,0.25);
+        display: flex; align-items:center; justify-content:center;
+        font-family: 'Orbitron', monospace;
+        font-size: 1.1em; font-weight: 900;
+        background: rgba(0,0,0,0.5);
+        transition: all 0.06s;
+        text-shadow: 0 0 8px currentColor;
+      }
+      .key-pad.l { color: var(--cyan);  border-color: var(--cyan);  }
+      .key-pad.d { color: var(--pink);  border-color: var(--pink);  }
+      .key-pad.u { color: var(--green); border-color: var(--green); }
+      .key-pad.r { color: var(--yellow);border-color: var(--yellow);}
+      .key-pad.active { transform: scale(0.88); filter: brightness(2); }
+
+      /* Judge text */
+      #hud-judge {
+        position: absolute; top: 38%; left: 50%;
+        transform: translateX(-50%) scale(1);
+        font-family: 'Orbitron', monospace;
+        font-size: 1.8em; font-weight: 900;
+        letter-spacing: 3px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s, transform 0.15s;
+        text-shadow: 0 0 20px currentColor;
+        white-space: nowrap;
+      }
+
+      /* ESC hint in game */
+      #hud-esc {
+        position: absolute; top: 12px; left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.65em; color: rgba(255,255,255,0.3);
+        letter-spacing: 1px;
+      }
+
+      /* ── Proximity prompt ── */
+      #hud-prompt {
+        display: none;
+        position: absolute; bottom: 70px; left: 50%;
+        transform: translateX(-50%);
+        flex-direction: column; align-items: center; gap: 6px;
+        pointer-events: none;
+      }
+      .prompt-box {
+        background: rgba(0,0,30,0.85);
+        border: 1px solid var(--cyan);
+        border-radius: 10px;
+        padding: 12px 24px;
+        text-align: center;
+        box-shadow: 0 0 20px rgba(0,255,255,0.2);
+        animation: promptPulse 1.2s ease-in-out infinite;
+      }
+      .prompt-box .prompt-key {
+        font-family: 'Orbitron', monospace;
+        font-size: 1.5em;
+        font-weight: 900;
+        color: var(--cyan);
+        text-shadow: 0 0 12px var(--cyan);
+        letter-spacing: 2px;
+      }
+      .prompt-box .prompt-sub {
+        font-size: 0.75em;
+        color: #8ab;
+        margin-top: 4px;
+        letter-spacing: 1px;
+      }
+      @keyframes promptPulse {
+        0%,100% { box-shadow: 0 0 20px rgba(0,255,255,0.2); }
+        50%      { box-shadow: 0 0 40px rgba(0,255,255,0.5); }
+      }
+
+      /* Mode selector in prompt */
+      .mode-row {
+        display: flex; gap: 8px;
+      }
+      .mode-btn {
+        padding: 5px 14px;
+        border-radius: 6px;
+        border: 1px solid rgba(0,255,255,0.3);
+        background: rgba(0,0,40,0.8);
+        color: #8ab;
+        cursor: pointer;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.8em;
+        pointer-events: all;
+        transition: all .15s;
+      }
+      .mode-btn:hover, .mode-btn.active { color:var(--cyan); border-color:var(--cyan); background:rgba(0,255,255,0.1); }
+
+      /* ── Result Screen ── */
+      #hud-result {
+        display: none;
+        position: absolute; inset: 0;
+        background: rgba(2,0,14,0.92);
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        pointer-events: all;
+      }
+      #hud-result h2 {
+        font-family: 'Orbitron', monospace;
+        font-size: 2em; font-weight: 900;
+        letter-spacing: 6px;
+        background: linear-gradient(90deg,var(--cyan),var(--pink));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 6px;
+      }
+      #res-grade {
+        font-family: 'Orbitron', monospace;
+        font-size: 5em; font-weight: 900;
+        color: var(--yellow);
+        text-shadow: 0 0 30px var(--yellow);
+        line-height: 1;
+        margin: 4px 0;
+      }
+      .result-row {
+        display: flex; gap: 30px;
+        font-size: 0.85em;
+        color: #8ab;
+      }
+      .result-stat { display: flex; flex-direction:column; align-items:center; gap:3px; }
+      .result-stat .val {
+        font-family: 'Orbitron', monospace;
+        font-size: 1.4em; font-weight: 700;
+        color: var(--cyan);
+      }
+      .result-stat .lbl { font-size: 0.7em; letter-spacing: 1px; color: #556; }
+      #res-score-big {
+        font-family: 'Orbitron', monospace;
+        font-size: 2em; font-weight: 900;
+        color: white;
+        letter-spacing: 3px;
+      }
+      .result-btns { display: flex; gap:12px; margin-top:10px; }
+      .result-btn {
+        padding: 9px 24px;
+        border-radius: 8px;
+        border: 1px solid rgba(0,255,255,0.4);
+        background: rgba(0,0,40,0.9);
+        color: var(--cyan);
+        cursor: pointer;
+        font-family: 'Orbitron', monospace;
+        font-size: 0.85em;
+        font-weight: 700;
+        letter-spacing: 1px;
+        transition: all .15s;
+      }
+      .result-btn:hover { background: rgba(0,255,255,0.12); box-shadow: 0 0 12px rgba(0,255,255,0.3); }
+
+      /* ── Chart import panel ── */
+      #chart-panel {
+        background: rgba(0,0,30,0.7);
+        border: 1px solid rgba(0,255,255,0.15);
+        border-radius: 8px;
+        padding: 8px 14px;
+        display: flex; flex-direction:column; gap:6px;
+        min-width: 220px;
+      }
+      #chart-panel label { font-family:'Orbitron',monospace; font-size:0.62em; color:var(--cyan); text-transform:uppercase; letter-spacing:1px; }
+      #chart-input {
+        background: rgba(0,0,20,0.8);
+        border: 1px solid rgba(0,255,255,0.2);
+        border-radius:5px; color:#8ab;
+        font-family:'Share Tech Mono',monospace; font-size:0.75em;
+        padding: 4px 8px; width:100%; resize:none;
+      }
+      #chart-input:focus { outline:none; border-color:var(--cyan); }
+      #load-chart-btn {
+        padding: 4px 10px;
+        border-radius: 5px;
+        border: 1px solid rgba(0,255,255,0.3);
+        background: rgba(0,0,40,0.8);
+        color: var(--cyan);
+        cursor: pointer;
+        font-family:'Share Tech Mono',monospace; font-size:0.8em;
+        transition: all .15s;
+      }
+      #load-chart-btn:hover { background: rgba(0,255,255,0.1); }
+      #chart-status { font-size:0.68em; color:#556; }
+
+      /* ── Audio upload ── */
+      #audio-upload-label {
+        padding: 4px 10px;
+        border-radius: 5px;
+        border: 1px solid rgba(0,255,255,0.2);
+        background: rgba(0,0,40,0.8);
+        color: #8ab;
+        cursor: pointer;
+        font-size: 0.78em;
+        transition: all .15s;
+        text-align: center;
+      }
+      #audio-upload-label:hover { color:var(--cyan); border-color:var(--cyan); }
+      #audio-file { display:none; }
+
+      /* Fullscreen tweaks */
       #canvas-wrapper:fullscreen,
       #canvas-wrapper:-webkit-full-screen {
-        display: flex; align-items: center; justify-content: center;
-        background: black;
-        width: 100vw !important; height: 100vh !important; margin: 0;
+        display:flex; align-items:center; justify-content:center;
+        background:black;
+        width:100vw !important; height:100vh !important; margin:0;
       }
     </style>
-
 
     <script type="importmap">
     {
@@ -128,60 +431,219 @@
     </script>
   </head>
 
-  <body onload="">
-    <h1>Three</h1>
-    <p class="subtitle">Nick Lafredo &nbsp;—&nbsp; nlafredo@ucsc.edu</p>
-    <p id="numdot">—</p>
+  <body>
+    <!-- ── Header ── -->
+    <div class="header">
+      <div class="header-left">
+        <h1>NEON RHYTHM</h1>
+        <p class="subtitle">Nick Lafredo &nbsp;—&nbsp; nlafredo@ucsc.edu &nbsp;|&nbsp; Three.js Asg 5</p>
+      </div>
+      <p id="numdot">—</p>
+    </div>
 
+    <!-- ── Controls Panel ── -->
+    <div class="panel">
+      <!-- Game mode -->
+      <div class="ctrl-group">
+        <label>Game Mode</label>
+        <div class="row">
+          <button class="toggle-btn active" id="btn-random" onclick="setMode('random')">Random</button>
+          <button class="toggle-btn"        id="btn-chart"  onclick="setMode('chart')">Chart</button>
+        </div>
+      </div>
+
+      <!-- BPM (random mode) -->
+      <div class="ctrl-group" id="bpm-group">
+        <label>BPM — Random Mode</label>
+        <div class="row">
+          <span>60</span>
+          <input type="range" id="bpm-slider" min="60" max="240" value="128" oninput="updateBPM(this.value)">
+          <span>240</span>
+          <span id="bpm-val" style="min-width:30px;color:var(--cyan)">128</span>
+        </div>
+      </div>
+
+      <!-- Chart import -->
+      <div id="chart-panel" style="display:none;">
+        <label>Import Chart JSON</label>
+        <textarea id="chart-input" rows="2" placeholder='{"bpm":128,"offset":0,"notes":[...]}'></textarea>
+        <button id="load-chart-btn" onclick="loadChartFromInput()">Load Chart</button>
+        <span id="chart-status">No chart loaded</span>
+      </div>
+
+      <!-- Audio upload -->
+      <div class="ctrl-group">
+        <label>Audio (optional)</label>
+        <label id="audio-upload-label" for="audio-file">📂 Upload MP3 / OGG</label>
+        <input type="file" id="audio-file" accept="audio/*" onchange="handleAudioUpload(event)">
+        <span id="audio-status" style="font-size:0.68em;color:#556;">No audio loaded</span>
+      </div>
+
+      <!-- Editor link -->
+      <div class="ctrl-group" style="justify-content:center;align-items:center;">
+        <label>Level Editor</label>
+        <a href="editor.html" target="_blank" class="toggle-btn" style="text-align:center;text-decoration:none;display:block;">
+          Open Editor ↗
+        </a>
+      </div>
+    </div>
+
+    <!-- ── Canvas ── -->
     <div id="canvas-wrapper">
       <canvas id="webgl" width="960" height="540"></canvas>
       <div id="crosshair">+</div>
-      <div id="hint">Click to capture mouse &nbsp;|&nbsp; WASD move &nbsp;·&nbsp; Space/Ctrl up/down &nbsp;·&nbsp; Mouse look</div>
+      <div id="hint">Click to capture mouse &nbsp;|&nbsp; WASD move &nbsp;·&nbsp; Space/Ctrl up/down &nbsp;·&nbsp; Mouse look &nbsp;·&nbsp; Walk to the glowing platform → press E</div>
+
+      <!-- HUD (game overlay) -->
+      <div id="hud">
+        <div id="hud-score-area">
+          <div id="hud-score">0000000</div>
+          <div id="hud-combo"></div>
+        </div>
+        <div id="hud-esc">[ ESC = exit ]</div>
+        <div id="hud-judge">PERFECT!</div>
+        <div id="hud-keys">
+          <div class="key-pad l" id="key-l">◄</div>
+          <div class="key-pad d" id="key-d">▼</div>
+          <div class="key-pad u" id="key-u">▲</div>
+          <div class="key-pad r" id="key-r">►</div>
+        </div>
+      </div>
+
+      <!-- Proximity prompt -->
+      <div id="hud-prompt">
+        <div class="prompt-box">
+          <div class="prompt-key">[ E ]  ENTER GAME</div>
+          <div class="prompt-sub">You're at the dance floor</div>
+          <div class="mode-row" style="margin-top:8px;justify-content:center;">
+            <button class="mode-btn active" id="pmb-random" onclick="setMode('random')">Random</button>
+            <button class="mode-btn"        id="pmb-chart"  onclick="setMode('chart')">Chart</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result screen -->
+      <div id="hud-result">
+        <h2>RESULTS</h2>
+        <div id="res-grade">S</div>
+        <div id="res-score-big">0000000</div>
+        <div class="result-row">
+          <div class="result-stat"><div class="val" id="res-combo">0</div><div class="lbl">MAX COMBO</div></div>
+          <div class="result-stat"><div class="val" id="res-perfect" style="color:var(--yellow)">0</div><div class="lbl">PERFECT</div></div>
+          <div class="result-stat"><div class="val" id="res-good"    style="color:var(--green)">0</div><div class="lbl">GOOD</div></div>
+          <div class="result-stat"><div class="val" id="res-miss"    style="color:#ff4444">0</div><div class="lbl">MISS</div></div>
+        </div>
+        <div class="result-btns">
+          <button class="result-btn" onclick="window.NeonRhythm.enterGame()">▶ RETRY</button>
+          <button class="result-btn" onclick="window.NeonRhythm.exitGame()">🌆 EXPLORE</button>
+        </div>
+      </div>
     </div>
 
-    <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+    <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ FULLSCREEN</button>
 
-
+    <!-- ── Resize + Fullscreen scripts ── -->
     <script>
-      const ASPECT = 16 / 9;
+      const ASPECT = 16/9;
 
       function resizeCanvas() {
         var wrapper = document.getElementById('canvas-wrapper');
         var isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
         var vw = isFS ? window.innerWidth  : Math.min(window.innerWidth - 40, 960);
-        var vh = isFS ? window.innerHeight : window.innerHeight * 0.65;
+        var vh = isFS ? window.innerHeight : window.innerHeight * 0.62;
         var w, h;
-        if (vw / vh > ASPECT) { h = Math.floor(vh); w = Math.floor(h * ASPECT); }
-        else                   { w = Math.floor(vw); h = Math.floor(w / ASPECT); }
+        if(vw/vh > ASPECT){ h=Math.floor(vh); w=Math.floor(h*ASPECT); }
+        else               { w=Math.floor(vw); h=Math.floor(w/ASPECT); }
         var c = document.getElementById('webgl');
-        c.style.width = w + 'px'; c.style.height = h + 'px';
-        wrapper.style.width = w + 'px'; wrapper.style.height = h + 'px';
+        c.style.width=w+'px'; c.style.height=h+'px';
+        wrapper.style.width=w+'px'; wrapper.style.height=h+'px';
       }
 
       function toggleFullscreen() {
         var wrapper = document.getElementById('canvas-wrapper');
-        if (!document.fullscreenElement && !document.webkitFullscreenElement)
+        if(!document.fullscreenElement && !document.webkitFullscreenElement)
           (wrapper.requestFullscreen || wrapper.webkitRequestFullscreen).call(wrapper);
         else
           (document.exitFullscreen || document.webkitExitFullscreen).call(document);
       }
 
-      document.addEventListener('fullscreenchange', function() {
-        resizeCanvas();
-        var btn = document.getElementById('fullscreenBtn');
-        if (btn) btn.textContent = document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
-      });
-      document.addEventListener('webkitfullscreenchange', function() {
-        resizeCanvas();
-        var btn = document.getElementById('fullscreenBtn');
-        if (btn) btn.textContent = document.webkitFullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+      ['fullscreenchange','webkitfullscreenchange'].forEach(ev=>{
+        document.addEventListener(ev,()=>{
+          resizeCanvas();
+          var btn=document.getElementById('fullscreenBtn');
+          if(btn) btn.textContent=(document.fullscreenElement||document.webkitFullscreenElement)?'✕ EXIT FULLSCREEN':'⛶ FULLSCREEN';
+        });
       });
       window.addEventListener('resize', resizeCanvas);
       window.addEventListener('load',   resizeCanvas);
+
+      // ── Panel / mode logic ──────────────────
+      let currentMode = 'random';
+
+      function setMode(mode) {
+        currentMode = mode;
+        document.getElementById('btn-random').classList.toggle('active', mode==='random');
+        document.getElementById('btn-chart').classList.toggle('active', mode==='chart');
+        document.getElementById('pmb-random').classList.toggle('active', mode==='random');
+        document.getElementById('pmb-chart').classList.toggle('active', mode==='chart');
+        document.getElementById('bpm-group').style.display   = mode==='random' ? '' : 'none';
+        document.getElementById('chart-panel').style.display = mode==='chart'  ? '' : 'none';
+        if(window.NeonRhythm) window.NeonRhythm.setMode(mode);
+      }
+
+      function updateBPM(val) {
+        document.getElementById('bpm-val').textContent = val;
+        if(window.NeonRhythm) window.NeonRhythm.setBPM(Number(val));
+      }
+
+      function loadChartFromInput() {
+        const raw = document.getElementById('chart-input').value.trim();
+        const status = document.getElementById('chart-status');
+        try {
+          const c = JSON.parse(raw);
+          if(!c.notes || !Array.isArray(c.notes)) throw new Error('Missing notes array');
+          if(window.NeonRhythm) window.NeonRhythm.loadChart(c);
+          status.textContent = `✓ ${c.notes.length} notes loaded (${c.bpm||'?'} BPM)`;
+          status.style.color = '#00ff88';
+        } catch(e) {
+          status.textContent = '✗ Invalid JSON: ' + e.message;
+          status.style.color = '#ff4444';
+        }
+      }
+
+      function handleAudioUpload(event) {
+        const file = event.target.files[0];
+        if(!file) return;
+        const status = document.getElementById('audio-status');
+        status.textContent = 'Loading…';
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const ctx = new (window.AudioContext||window.webkitAudioContext)();
+            const buf = await ctx.decodeAudioData(e.target.result.slice(0));
+            if(window.NeonRhythm) window.NeonRhythm.loadAudio(buf);
+            status.textContent = `✓ ${file.name} (${buf.duration.toFixed(1)}s)`;
+            status.style.color = '#00ff88';
+          } catch(err) {
+            status.textContent = '✗ Could not decode audio';
+            status.style.color = '#ff4444';
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      }
+
+      // ── Key pad visual feedback ─────────────
+      const padMap = { a:'key-l', s:'key-d', w:'key-u', d:'key-r' };
+      document.addEventListener('keydown', e=>{
+        const id = padMap[e.key.toLowerCase()];
+        if(id) document.getElementById(id)?.classList.add('active');
+      });
+      document.addEventListener('keyup', e=>{
+        const id = padMap[e.key.toLowerCase()];
+        if(id) document.getElementById(id)?.classList.remove('active');
+      });
     </script>
 
-
-  <script type="module" src="asg5.js"></script>
-
+    <script type="module" src="asg5.js"></script>
   </body>
 </html>

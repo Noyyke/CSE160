@@ -52,16 +52,24 @@ camera.position.set(0, 1.7, 20);
 const texLoader  = new THREE.TextureLoader();
 const gltfLoader = new GLTFLoader();
 
+// Texture cache — avoid recreating identical textures every frame
+const _texCache = new Map();
 function makeColorTex(hex, w=2, h=2) {
+  const key = `color_${hex}_${w}_${h}`;
+  if (_texCache.has(key)) return _texCache.get(key);
   const c = document.createElement('canvas'); c.width=w; c.height=h;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#' + hex.toString(16).padStart(6,'0');
   ctx.fillRect(0,0,w,h);
-  return new THREE.CanvasTexture(c);
+  const t = new THREE.CanvasTexture(c);
+  _texCache.set(key, t);
+  return t;
 }
 
 // Procedural grid texture for dance floor
 function makeGridTex(size=512, lines=16, bg=0x110022, line=0x00ffff) {
+  const key = `grid_${size}_${lines}_${bg}_${line}`;
+  if (_texCache.has(key)) return _texCache.get(key);
   const c = document.createElement('canvas'); c.width=size; c.height=size;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#' + bg.toString(16).padStart(6,'0');
@@ -76,6 +84,7 @@ function makeGridTex(size=512, lines=16, bg=0x110022, line=0x00ffff) {
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(4,4);
+  _texCache.set(key, t);
   return t;
 }
 
@@ -92,7 +101,7 @@ function makeNeonTex(text, fg='#ff00cc', bg='#110011', size=256) {
   return new THREE.CanvasTexture(c);
 }
 
-// Arrow shape (extruded)
+// Arrow shape (extruded) — shared geometry per lane
 function makeArrowShape() {
   const s = new THREE.Shape();
   // Pointing +Y
@@ -201,8 +210,11 @@ const buildingMats = [
   new THREE.MeshStandardMaterial({color:0x080818, roughness:0.95, metalness:0.1}),
 ];
 
-// Window texture for buildings
+// Window texture for buildings — one shared texture, reused across all buildings
+let _sharedWindowTex = null;
 function makeWindowTex() {
+  // Each building gets its own unique texture (for visual variety), but we
+  // reuse the same canvas element rather than creating a new one each time.
   const c=document.createElement('canvas'); c.width=128; c.height=256;
   const ctx=c.getContext('2d');
   ctx.fillStyle='#05050f'; ctx.fillRect(0,0,128,256);
@@ -487,22 +499,32 @@ const POOL_SIZE = 60;
 const arrowPool = [];
 const activeArrows = [];
 
+// Pre-built shared geometries and materials per lane — avoids recreating
+// ExtrudeGeometry for every pooled arrow (expensive!).
+const _arrowGeos = [];
+const _arrowMats = [];
+
 function buildArrowPool() {
   const shape = makeArrowShape();
   const ext   = { depth:0.12, bevelEnabled:true, bevelThickness:0.03, bevelSize:0.03, bevelSegments:3 };
   const rotations = [Math.PI/2, 0, Math.PI, -Math.PI/2];
 
-  for(let i=0;i<POOL_SIZE;i++) {
-    const lane = i % LANE_COUNT;
-    const geo  = new THREE.ExtrudeGeometry(shape, ext);
+  // Build one geo+mat per lane, shared by all pool arrows of that lane
+  for(let lane=0;lane<LANE_COUNT;lane++) {
+    const geo = new THREE.ExtrudeGeometry(shape, ext);
     geo.center();
-    const mat = new THREE.MeshStandardMaterial({
+    _arrowGeos.push(geo);
+    _arrowMats.push(new THREE.MeshStandardMaterial({
       color:    LANE_COLORS[lane],
       emissive: new THREE.Color(LANE_COLORS[lane]),
       emissiveIntensity: 1.5,
       roughness:0.1, metalness:0.6,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
+    }));
+  }
+
+  for(let i=0;i<POOL_SIZE;i++) {
+    const lane = i % LANE_COUNT;
+    const mesh = new THREE.Mesh(_arrowGeos[lane], _arrowMats[lane]);
     mesh.rotation.z = rotations[lane];
     mesh.visible = false;
     mesh.castShadow = true;
@@ -519,22 +541,20 @@ function buildArrowPool() {
 }
 
 function getPooledArrow(lane) {
-  // Find a non-visible arrow of matching lane, or any lane
+  // Find a non-visible arrow of matching lane
   for(let a of arrowPool) {
     if(!a.visible && a.userData.lane===lane) {
       a.visible=true; return a;
     }
   }
-  // Fallback: any unused
+  // Fallback: any unused arrow — reassign lane visuals
+  const rotations = [Math.PI/2, 0, Math.PI, -Math.PI/2];
   for(let a of arrowPool) {
     if(!a.visible) {
-      // re-skin for new lane
       a.userData.lane = lane;
-      a.material.color.setHex(LANE_COLORS[lane]);
-      a.material.emissive.setHex(LANE_COLORS[lane]);
+      a.material = _arrowMats[lane];
       a.userData.light.color.setHex(LANE_COLORS[lane]);
-      const rots = [Math.PI/2, 0, Math.PI, -Math.PI/2];
-      a.rotation.z = rots[lane];
+      a.rotation.z = rotations[lane];
       a.visible=true; return a;
     }
   }
@@ -561,12 +581,30 @@ let goods      = 0;
 let misses     = 0;
 let totalNotes = 0;
 
-// Audio
+// ─────────────────────────────────────────────
+//  FIX: Use performance.now()-based wall clock for songTime
+//  instead of AudioContext.currentTime, which starts suspended
+//  in modern browsers and doesn't advance until a user gesture
+//  fully resolves the AudioContext. This was causing all arrows
+//  to freeze at spawn position (stuck at z = TARGET_Z - HIGHWAY_LEN)
+//  because songTime() always returned 0 or a stale value.
+// ─────────────────────────────────────────────
+let songStartWall = 0;   // performance.now() snapshot at game start (ms)
+let songPauseAccum = 0;  // accumulated pause time (unused here, for extensibility)
+
+/**
+ * Returns elapsed game time in seconds since enterGame() was called.
+ * Uses performance.now() so it works regardless of AudioContext state.
+ */
+function songTime() {
+  if(gameState !== STATES.PLAYING) return 0;
+  return (performance.now() - songStartWall) / 1000;
+}
+
+// Audio (separate from songTime — audio playback is best-effort)
 let audioCtx   = null;
 let songBuffer = null;
 let songSource = null;
-let songStartTime=0;
-let songTime   = ()=> audioCtx ? audioCtx.currentTime - songStartTime : 0;
 
 // Chart data
 let chart       = null;          // { bpm, offset, notes:[{time,lane}] }
@@ -657,6 +695,7 @@ let exploreCamQuat = new THREE.Quaternion();
 
 function enterGame() {
   if(gameState===STATES.PLAYING) return;
+
   // Save explore position/rotation
   exploreCamPos.copy(camera.position);
   exploreCamQuat.copy(camera.quaternion);
@@ -664,29 +703,36 @@ function enterGame() {
   controls.unlock();
   gameState = STATES.PLAYING;
 
-  // Snap camera
+  // Snap camera to game position
   camera.position.copy(GAME_CAM_POS);
   camera.rotation.copy(GAME_CAM_ROT);
 
   // Reset score
   score=0;combo=0;maxCombo=0;perfects=0;goods=0;misses=0;totalNotes=0;noteIndex=0;
 
-  // Init audio context
-  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-  songStartTime = audioCtx.currentTime;
+  // ─── FIX: Record wall-clock start time for songTime().
+  // We do this BEFORE any async audio work so the timer is accurate.
+  // AudioContext.currentTime was the old approach and fails because
+  // AudioContext starts in a suspended state and its clock doesn't
+  // advance until resume() completes (which is async).
+  songStartWall = performance.now();
 
   // Show game HUD
   hudEl.style.display='block';
   promptEl.style.display='none';
   resultEl.style.display='none';
 
-  // Activate mode
+  // Init audio context on demand (requires user gesture — we're in a keydown handler here)
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+
+  // Activate selected mode
   if(gameMode==='chart' && chart) {
     scheduleChart();
   } else {
-    randomActive=true;
-    beatTimer=0;
-    beatInterval=60/bpm;
+    // Random mode — no audio scheduling needed; wall-clock timer drives everything
+    randomActive = true;
+    beatTimer    = 0;
+    beatInterval = 60 / bpm;
   }
 }
 
@@ -732,16 +778,15 @@ function endGame() {
 // ─────────────────────────────────────────────
 //  Arrow spawning
 // ─────────────────────────────────────────────
-const SPAWN_Z   =  HIGHWAY_LEN;   // in game-camera-space, arrows start far
 const TARGET_Z  = -8;             // world z of target zone
-const CAM_Z     = GAME_CAM_POS.z;
 
 function spawnArrow(lane) {
   const arrow = getPooledArrow(lane);
   if(!arrow) return;
   arrow.position.set(LANE_X[lane], 0.5, TARGET_Z - HIGHWAY_LEN);
-  arrow.userData.spawnTime  = songTime();
-  arrow.userData.targetTime = arrow.userData.spawnTime + TRAVEL_TIME;
+  const st = songTime();
+  arrow.userData.spawnTime  = st;
+  arrow.userData.targetTime = st + TRAVEL_TIME;
   arrow.userData.hit    = false;
   arrow.userData.missed = false;
   arrow.userData.light.intensity = 1.2;
@@ -750,18 +795,29 @@ function spawnArrow(lane) {
 }
 
 function scheduleChart() {
-  // Play audio
+  // ─── FIX: songStartWall is already set in enterGame() before this is called.
+  // If audio is available, start it now. The audio clock and wall clock will
+  // drift slightly over long songs but for a game this is acceptable.
+  // The key change: we no longer rely on audioCtx.currentTime for game logic.
   if(songBuffer && audioCtx) {
-    songSource = audioCtx.createBufferSource();
-    songSource.buffer = songBuffer;
-    songSource.connect(audioCtx.destination);
-    songSource.start(0, chart.offset||0);
-    songSource.onended = ()=>{ if(gameState===STATES.PLAYING) endGame(); };
-    songStartTime = audioCtx.currentTime - (chart.offset||0);
-  } else {
-    // No audio — schedule by wall clock
-    songStartTime = audioCtx ? audioCtx.currentTime : 0;
+    // Resume context if suspended (required by browser autoplay policy)
+    const startAudio = () => {
+      if(songSource) { try{songSource.stop();}catch(e){} }
+      songSource = audioCtx.createBufferSource();
+      songSource.buffer = songBuffer;
+      songSource.connect(audioCtx.destination);
+      const offsetSec = chart.offset || 0;
+      songSource.start(0, Math.max(0, offsetSec));
+      songSource.onended = ()=>{ if(gameState===STATES.PLAYING) endGame(); };
+    };
+
+    if(audioCtx.state === 'suspended') {
+      audioCtx.resume().then(startAudio);
+    } else {
+      startAudio();
+    }
   }
+  // No audio: wall-clock timer drives note spawning; chart ends when all notes processed.
 }
 
 // ─────────────────────────────────────────────
@@ -834,11 +890,7 @@ document.addEventListener('keyup', e=>{
 // ─────────────────────────────────────────────
 //  Load a GLB model
 // ─────────────────────────────────────────────
-// Free model: Neon Cyber Car by Quaternius
-// https://quaternius.com/packs/ultimatecars.html
-// OR fallback: just place an obvious placeholder
 function loadGLBModel() {
-  // Try to load from models/model.glb — student places file there
   gltfLoader.load(
     'models/model.glb',
     (gltf)=>{
@@ -851,7 +903,6 @@ function loadGLBModel() {
     },
     undefined,
     ()=>{
-      // Fallback: simple futuristic car shape from primitives
       const carGroup = buildFallbackCar();
       carGroup.position.set(12,0,5);
       carGroup.rotation.y=-Math.PI/4;
@@ -987,6 +1038,7 @@ const discoRef={mesh:null,light:null};
 // ─────────────────────────────────────────────
 //  Build everything
 // ─────────────────────────────────────────────
+buildSkybox();
 buildDanceFloor();
 buildTargetZones();
 buildArrowPool();
@@ -1008,11 +1060,14 @@ function onResize() {
 // ─────────────────────────────────────────────
 //  Main Loop
 // ─────────────────────────────────────────────
-let lastTime=0;
 import { Timer } from 'three/addons/misc/Timer.js';
 const clock = new Timer();
 
-function animate(now) {
+// Reusable Vector2 for proximity checks — avoids per-frame allocation
+const _pos2D   = new THREE.Vector2();
+const _floor2D = new THREE.Vector2(FLOOR_POS.x, FLOOR_POS.z);
+
+function animate() {
   requestAnimationFrame(animate);
   clock.update();
   const dt = Math.min(clock.getDelta(), 0.1);
@@ -1025,7 +1080,8 @@ function animate(now) {
   orbs.forEach((o,i)=>{
     const y = o.baseY + Math.sin(t*1.2+o.phase)*0.3;
     o.mesh.position.y=y;
-    orbLights[i].position.copy(o.mesh.position);
+    orbLights[i].position.y=y;
+    // Only copy x/z once (they never change)
   });
 
   // Floating rings
@@ -1035,7 +1091,6 @@ function animate(now) {
       r.mesh.position.y=3.5+Math.sin(t*0.8)*0.2;
     } else {
       r.mesh.rotation.z += 0.005;
-      r.mesh.position.y=r.mesh.position.y; // static height
     }
   });
 
@@ -1068,10 +1123,9 @@ function animate(now) {
     controls.moveForward(-vel.z*dt);
     camera.position.y=Math.max(1.7, camera.position.y+vel.y*dt);
 
-    // Proximity check
-    const pos2D=new THREE.Vector2(camera.position.x, camera.position.z);
-    const floor2D=new THREE.Vector2(FLOOR_POS.x, FLOOR_POS.z);
-    const dist=pos2D.distanceTo(floor2D);
+    // Proximity check — reuse vectors, no allocation
+    _pos2D.set(camera.position.x, camera.position.z);
+    const dist=_pos2D.distanceTo(_floor2D);
     if(dist<PROXIMITY_R) {
       gameState=STATES.PROMPT;
       promptEl.style.display='flex';
@@ -1083,7 +1137,7 @@ function animate(now) {
 
   // ── Game logic ─────────────────────────────
   if(gameState===STATES.PLAYING) {
-    const st=songTime();
+    const st = songTime();   // wall-clock based — always advances correctly
 
     // Spawn arrows (random mode)
     if(randomActive) {
@@ -1102,15 +1156,16 @@ function animate(now) {
     }
 
     // Spawn arrows (chart mode)
-    if(gameMode==='chart'&&chart) {
+    if(gameMode==='chart' && chart) {
       while(noteIndex<chart.notes.length) {
         const note=chart.notes[noteIndex];
+        // Spawn the arrow TRAVEL_TIME seconds before its target time
         if(note.time - TRAVEL_TIME <= st) {
           spawnArrow(note.lane);
           noteIndex++;
         } else break;
       }
-      // Chart finished
+      // Chart finished — all notes spawned and cleared
       if(noteIndex>=chart.notes.length && activeArrows.length===0) {
         endGame();
       }
@@ -1135,11 +1190,12 @@ function animate(now) {
         showJudge('MISS','#ff4444');
         updateHUD();
         recycleArrow(arrow);
+        // recycleArrow splices activeArrows, so decrement i
         i--;
       }
     }
 
-    // Judge timer
+    // Judge fade timer
     if(judgeTimer>0) {
       judgeTimer-=dt;
       if(judgeTimer<=0) {
@@ -1170,7 +1226,7 @@ window.NeonRhythm = {
   getState: ()=>gameState,
 };
 
-// Update numdot
+// Debug info
 setInterval(()=>{
   document.getElementById('numdot').textContent=
     `Active arrows: ${activeArrows.length} | Tris: ${renderer.info.render.triangles}`;
