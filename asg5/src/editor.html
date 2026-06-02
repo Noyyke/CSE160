@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Neon Rhythm — Level Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    :root {
+      --cyan:   #00ffff;
+      --pink:   #ff00aa;
+      --green:  #00ff88;
+      --yellow: #ffcc00;
+      --l:      #00ffff;
+      --d:      #ff00aa;
+      --u:      #00ff88;
+      --r:      #ffcc00;
+    }
+
+    body {
+      background: #04000f;
+      color: #ccc;
+      font-family: 'Share Tech Mono', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px 40px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 1000px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(0,255,255,0.2);
+      margin-bottom: 18px;
+    }
+    header h1 {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.6em;
+      font-weight: 900;
+      letter-spacing: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header .back {
+      color: var(--cyan); font-size: 0.8em; text-decoration:none;
+      border: 1px solid rgba(0,255,255,0.3); padding: 5px 12px;
+      border-radius: 6px; transition: all .15s;
+    }
+    header .back:hover { background: rgba(0,255,255,0.1); }
+
+    /* ── Main layout ── */
+    .editor-layout {
+      width: 100%;
+      max-width: 1000px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 16px;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel-box {
+      background: rgba(0,0,30,0.7);
+      border: 1px solid rgba(0,255,255,0.15);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .panel-box h3 {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7em;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      text-transform: uppercase;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(0,255,255,0.1);
+    }
+
+    label.field-label {
+      font-size: 0.68em;
+      color: #667;
+      display: block;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    input[type=text], input[type=number] {
+      width: 100%;
+      background: rgba(0,0,20,0.8);
+      border: 1px solid rgba(0,255,255,0.2);
+      border-radius: 5px;
+      color: var(--cyan);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85em;
+      padding: 5px 8px;
+    }
+    input:focus { outline: none; border-color: var(--cyan); }
+    input[type=range] { width:100%; accent-color:var(--cyan); }
+
+    /* Lane buttons */
+    .lane-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .lane-btn {
+      padding: 8px 4px;
+      border-radius: 7px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      font-family: 'Orbitron', monospace;
+      font-size: 1em;
+      font-weight: 900;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      transition: all .1s;
+      background: rgba(0,0,40,0.7);
+    }
+    .lane-btn span.small { font-size:0.55em; font-weight:400; font-family:'Share Tech Mono',monospace; opacity:0.7; }
+    .lane-btn.l { color:var(--l); border-color:rgba(0,255,255,0.3); }
+    .lane-btn.d { color:var(--d); border-color:rgba(255,0,170,0.3); }
+    .lane-btn.u { color:var(--u); border-color:rgba(0,255,136,0.3); }
+    .lane-btn.r { color:var(--r); border-color:rgba(255,204,0,0.3); }
+    .lane-btn:hover, .lane-btn.selected {
+      filter: brightness(1.4);
+      transform: scale(1.05);
+    }
+    .lane-btn.l.selected { background:rgba(0,255,255,0.15); border-color:var(--l); box-shadow:0 0 10px rgba(0,255,255,0.3); }
+    .lane-btn.d.selected { background:rgba(255,0,170,0.15); border-color:var(--d); box-shadow:0 0 10px rgba(255,0,170,0.3); }
+    .lane-btn.u.selected { background:rgba(0,255,136,0.15); border-color:var(--u); box-shadow:0 0 10px rgba(0,255,136,0.3); }
+    .lane-btn.r.selected { background:rgba(255,204,0,0.15); border-color:var(--r); box-shadow:0 0 10px rgba(255,204,0,0.3); }
+
+    /* Action buttons */
+    .action-btn {
+      padding: 8px;
+      border-radius: 7px;
+      border: 1px solid rgba(0,255,255,0.3);
+      background: rgba(0,0,40,0.8);
+      color: var(--cyan);
+      cursor: pointer;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85em;
+      text-align: center;
+      transition: all .15s;
+      width: 100%;
+    }
+    .action-btn:hover { background:rgba(0,255,255,0.1); box-shadow:0 0 10px rgba(0,255,255,0.2); }
+    .action-btn.danger { color:#ff4444; border-color:rgba(255,68,68,0.4); }
+    .action-btn.danger:hover { background:rgba(255,68,68,0.1); }
+    .action-btn.green  { color:var(--green); border-color:rgba(0,255,136,0.4); }
+    .action-btn.green:hover { background:rgba(0,255,136,0.1); }
+
+    #play-btn { font-size:1.2em; font-weight:bold; padding:10px; }
+
+    /* ── Main area ── */
+    .main-area {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Waveform / playhead area */
+    .audio-bar {
+      background: rgba(0,0,30,0.7);
+      border: 1px solid rgba(0,255,255,0.15);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .audio-bar h3 {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7em; letter-spacing:2px; color:var(--cyan); text-transform:uppercase;
+    }
+    .audio-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #waveform-canvas {
+      flex: 1;
+      height: 60px;
+      border-radius: 6px;
+      background: rgba(0,0,20,0.8);
+      cursor: crosshair;
+    }
+    .time-display {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.1em;
+      color: var(--cyan);
+      min-width: 80px;
+      text-align: right;
+    }
+    #audio-upload-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid rgba(0,255,255,0.3);
+      background: rgba(0,0,40,0.8);
+      color: var(--cyan);
+      cursor: pointer;
+      font-family:'Share Tech Mono',monospace; font-size:0.8em;
+    }
+    #audio-file { display:none; }
+
+    /* ── Timeline ── */
+    .timeline-container {
+      background: rgba(0,0,30,0.7);
+      border: 1px solid rgba(0,255,255,0.15);
+      border-radius: 10px;
+      padding: 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 320px;
+    }
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .timeline-header h3 {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7em; letter-spacing:2px; color:var(--cyan); text-transform:uppercase;
+    }
+    .zoom-row { display:flex; align-items:center; gap:6px; font-size:0.75em; color:#556; }
+    .zoom-row input { width:80px; }
+
+    #timeline-canvas {
+      width: 100%;
+      border-radius: 6px;
+      background: rgba(0,0,15,0.9);
+      cursor: crosshair;
+      display: block;
+    }
+    .tl-legend {
+      display: flex;
+      gap: 12px;
+      font-size: 0.7em;
+    }
+    .tl-legend span {
+      display:flex; align-items:center; gap:4px;
+    }
+    .tl-legend .dot {
+      width:10px; height:10px; border-radius:50%;
+      display:inline-block;
+    }
+
+    /* ── Note list ── */
+    .note-list-area {
+      background: rgba(0,0,30,0.7);
+      border: 1px solid rgba(0,255,255,0.15);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .note-list-header { display:flex; justify-content:space-between; align-items:center; }
+    .note-list-header h3 {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7em; letter-spacing:2px; color:var(--cyan); text-transform:uppercase;
+    }
+    #note-count { font-size:0.72em; color:#556; }
+    #note-list {
+      max-height: 120px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    #note-list::-webkit-scrollbar { width:4px; }
+    #note-list::-webkit-scrollbar-track { background:rgba(0,0,30,0.5); }
+    #note-list::-webkit-scrollbar-thumb { background:rgba(0,255,255,0.3); border-radius:2px; }
+    .note-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 0.74em;
+      background: rgba(0,0,20,0.6);
+    }
+    .note-item .ni-arrow { width:16px; text-align:center; }
+    .note-item .ni-time  { color:#667; flex:1; }
+    .note-item .ni-del {
+      cursor:pointer; color:#ff4444; opacity:0.6; font-size:0.9em;
+      border:none; background:none; padding:0 2px;
+    }
+    .note-item .ni-del:hover { opacity:1; }
+
+    /* ── Export ── */
+    .export-area {
+      background: rgba(0,0,30,0.7);
+      border: 1px solid rgba(0,255,255,0.15);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .export-area h3 {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7em; letter-spacing:2px; color:var(--cyan); text-transform:uppercase;
+    }
+    #export-output {
+      width: 100%;
+      min-height: 80px;
+      background: rgba(0,0,15,0.9);
+      border: 1px solid rgba(0,255,255,0.15);
+      border-radius: 6px;
+      color: #8ab;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75em;
+      padding: 8px;
+      resize: vertical;
+    }
+    .export-btns { display:flex; gap:8px; flex-wrap:wrap; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>LEVEL EDITOR</h1>
+    <p style="font-size:0.72em;color:#556;margin-top:4px;letter-spacing:1px;">Neon Rhythm — Chart Creator</p>
+  </div>
+  <a class="back" href="index.html">← Back to Game</a>
+</header>
+
+<div class="editor-layout">
+
+  <!-- ── Sidebar ── -->
+  <div class="sidebar">
+
+    <!-- Song settings -->
+    <div class="panel-box">
+      <h3>Song Settings</h3>
+
+      <div>
+        <label class="field-label">Song Title</label>
+        <input type="text" id="song-title" placeholder="My Chart" value="My Chart">
+      </div>
+      <div>
+        <label class="field-label">BPM</label>
+        <input type="number" id="bpm-input" value="128" min="40" max="400" step="0.5">
+      </div>
+      <div>
+        <label class="field-label">Offset (seconds)</label>
+        <input type="number" id="offset-input" value="0" min="-5" max="30" step="0.01">
+      </div>
+      <div>
+        <label class="field-label">Playback Speed</label>
+        <div style="display:flex;gap:6px;align-items:center;font-size:0.8em;color:#8ab;">
+          <span>0.25×</span>
+          <input type="range" id="speed-slider" min="25" max="100" value="100" step="5">
+          <span id="speed-val">1×</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lane selector -->
+    <div class="panel-box">
+      <h3>Active Lane</h3>
+      <div class="lane-btns">
+        <button class="lane-btn l selected" onclick="selectLane(0)" id="lb-0">◄<span class="small">[ A ]  LEFT</span></button>
+        <button class="lane-btn d"          onclick="selectLane(1)" id="lb-1">▼<span class="small">[ S ]  DOWN</span></button>
+        <button class="lane-btn u"          onclick="selectLane(2)" id="lb-2">▲<span class="small">[ W ]  UP</span></button>
+        <button class="lane-btn r"          onclick="selectLane(3)" id="lb-3">►<span class="small">[ D ]  RIGHT</span></button>
+      </div>
+      <p style="font-size:0.65em;color:#445;text-align:center;">A/S/W/D to select &amp; stamp while playing</p>
+    </div>
+
+    <!-- Playback -->
+    <div class="panel-box">
+      <h3>Playback</h3>
+      <button class="action-btn" id="play-btn" onclick="togglePlay()">▶ PLAY</button>
+      <button class="action-btn" onclick="jumpToStart()">⏮ REWIND</button>
+      <button class="action-btn danger" onclick="clearAllNotes()">🗑 CLEAR ALL</button>
+    </div>
+
+    <!-- Snap -->
+    <div class="panel-box">
+      <h3>Beat Snap</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="action-btn" id="snap-4"  onclick="setSnap(4)"  style="flex:1;padding:5px;">1/4</button>
+        <button class="action-btn" id="snap-8"  onclick="setSnap(8)"  style="flex:1;padding:5px;">1/8</button>
+        <button class="action-btn" id="snap-16" onclick="setSnap(16)" style="flex:1;padding:5px;">1/16</button>
+        <button class="action-btn" id="snap-0"  onclick="setSnap(0)"  style="flex:1;padding:5px;color:#667">Free</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Main area ── -->
+  <div class="main-area">
+
+    <!-- Audio -->
+    <div class="audio-bar">
+      <h3>Audio Track</h3>
+      <div class="audio-top">
+        <label id="audio-upload-btn" for="audio-file">📂 Upload Audio</label>
+        <input type="file" id="audio-file" accept="audio/*">
+        <span id="audio-name" style="font-size:0.75em;color:#556;flex:1;">No audio loaded — editing without audio</span>
+        <canvas id="waveform-canvas" width="400" height="60"></canvas>
+        <div class="time-display" id="time-display">0.000s</div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-container">
+      <div class="timeline-header">
+        <h3>Timeline — Click or use keys to stamp notes</h3>
+        <div class="zoom-row">
+          Zoom: <input type="range" id="zoom-slider" min="20" max="300" value="80">
+          <span id="zoom-val">80px/s</span>
+        </div>
+      </div>
+      <canvas id="timeline-canvas" height="180"></canvas>
+      <div class="tl-legend">
+        <span><span class="dot" style="background:var(--l)"></span>Left (A)</span>
+        <span><span class="dot" style="background:var(--d)"></span>Down (S)</span>
+        <span><span class="dot" style="background:var(--u)"></span>Up (W)</span>
+        <span><span class="dot" style="background:var(--r)"></span>Right (D)</span>
+        <span style="color:#445;margin-left:auto;font-size:0.85em;">Click timeline to seek &nbsp;|&nbsp; Right-click note to delete</span>
+      </div>
+    </div>
+
+    <!-- Note list -->
+    <div class="note-list-area">
+      <div class="note-list-header">
+        <h3>Notes</h3>
+        <span id="note-count">0 notes</span>
+      </div>
+      <div id="note-list"></div>
+    </div>
+
+    <!-- Export -->
+    <div class="export-area">
+      <h3>Export / Import</h3>
+      <textarea id="export-output" readonly placeholder="Click 'Generate JSON' to export your chart…"></textarea>
+      <div class="export-btns">
+        <button class="action-btn green" onclick="exportChart()" style="flex:1;">Generate JSON</button>
+        <button class="action-btn"       onclick="copyChart()"   style="flex:1;">📋 Copy</button>
+        <button class="action-btn"       onclick="downloadChart()" style="flex:1;">💾 Download .json</button>
+        <button class="action-btn danger" onclick="importChart()" style="flex:1;">📥 Import JSON</button>
+      </div>
+    </div>
+
+  </div><!-- main-area -->
+</div><!-- editor-layout -->
+
+<script>
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let notes      = [];          // { time:number, lane:0-3 }
+let activeLane = 0;
+let snapDiv    = 4;           // beat subdivisions; 0=free
+let bpm        = 128;
+let offset     = 0;
+let zoom       = 80;          // px per second
+let playhead   = 0;           // current time (seconds)
+let isPlaying  = false;
+let playStart  = null;        // Date.now() when play started
+let playOffset = 0;           // playhead at play start
+let duration   = 60;          // seconds (from audio or default 60)
+let scrollX    = 0;           // horizontal scroll offset in px
+let audioBuffer= null;
+let audioCtx   = null;
+let audioSource= null;
+let audioSpeed = 1.0;
+
+// ═══════════════════════════════════════════
+//  Audio
+// ═══════════════════════════════════════════
+document.getElementById('audio-file').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  const arr  = await file.arrayBuffer();
+  audioBuffer = await audioCtx.decodeAudioData(arr);
+  duration = audioBuffer.duration;
+  document.getElementById('audio-name').textContent = file.name + ` (${duration.toFixed(1)}s)`;
+  drawWaveform();
+});
+
+function drawWaveform() {
+  const cvs = document.getElementById('waveform-canvas');
+  const ctx  = cvs.getContext('2d');
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  if(!audioBuffer) {
+    ctx.fillStyle='rgba(0,255,255,0.1)';
+    ctx.fillRect(0,0,cvs.width,cvs.height);
+    ctx.fillStyle='#334'; ctx.font='12px monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('no audio', cvs.width/2, cvs.height/2);
+    return;
+  }
+  const data  = audioBuffer.getChannelData(0);
+  const step  = Math.ceil(data.length / cvs.width);
+  const amp   = cvs.height/2;
+  ctx.fillStyle='#03001a';
+  ctx.fillRect(0,0,cvs.width,cvs.height);
+  ctx.beginPath();
+  ctx.strokeStyle='#00ffff';
+  ctx.lineWidth=1;
+  for(let x=0;x<cvs.width;x++) {
+    let max=0;
+    for(let s=x*step; s<(x+1)*step && s<data.length; s++) max=Math.max(max,Math.abs(data[s]));
+    ctx.moveTo(x, amp-max*amp);
+    ctx.lineTo(x, amp+max*amp);
+  }
+  ctx.stroke();
+}
+
+// Click waveform to seek
+document.getElementById('waveform-canvas').addEventListener('click', e=>{
+  const r=e.currentTarget.getBoundingClientRect();
+  const frac=(e.clientX-r.left)/r.width;
+  seek(frac*duration);
+});
+
+// ═══════════════════════════════════════════
+//  Playback
+// ═══════════════════════════════════════════
+function togglePlay() {
+  isPlaying ? pause() : play();
+}
+function play() {
+  isPlaying=true;
+  playOffset=playhead;
+  playStart=Date.now();
+  document.getElementById('play-btn').textContent='⏸ PAUSE';
+
+  if(audioBuffer && audioCtx) {
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    if(audioSource) { try{audioSource.stop();}catch(e){} }
+    audioSource = audioCtx.createBufferSource();
+    audioSource.buffer = audioBuffer;
+    audioSource.playbackRate.value = audioSpeed;
+    audioSource.connect(audioCtx.destination);
+    const startAt = Math.max(0, playhead - offset);
+    audioSource.start(0, startAt);
+    audioSource.onended = ()=>{ if(isPlaying) pause(); };
+  }
+  requestAnimationFrame(tick);
+}
+function pause() {
+  isPlaying=false;
+  document.getElementById('play-btn').textContent='▶ PLAY';
+  if(audioSource) { try{audioSource.stop();}catch(e){} audioSource=null; }
+}
+function seek(t) {
+  const wasPlaying=isPlaying;
+  if(isPlaying) pause();
+  playhead=Math.max(0,Math.min(duration,t));
+  if(wasPlaying) play();
+  drawTimeline();
+}
+function jumpToStart() { seek(0); }
+
+function tick() {
+  if(!isPlaying) return;
+  const elapsed=(Date.now()-playStart)/1000*audioSpeed;
+  playhead=playOffset+elapsed;
+  if(playhead>=duration) { playhead=duration; pause(); }
+  document.getElementById('time-display').textContent = playhead.toFixed(3)+'s';
+  // Auto-scroll timeline to follow playhead
+  const tlCvs=document.getElementById('timeline-canvas');
+  const phX=playhead*zoom-scrollX;
+  if(phX>tlCvs.clientWidth*0.75) scrollX=playhead*zoom-tlCvs.clientWidth*0.5;
+  if(phX<tlCvs.clientWidth*0.25) scrollX=Math.max(0,playhead*zoom-tlCvs.clientWidth*0.5);
+  drawTimeline();
+  requestAnimationFrame(tick);
+}
+
+// ═══════════════════════════════════════════
+//  Timeline Drawing
+// ═══════════════════════════════════════════
+const LANE_COLORS=['#00ffff','#ff00aa','#00ff88','#ffcc00'];
+const LANE_LABELS=['◄','▼','▲','►'];
+const LANE_Y=[30, 70, 110, 150];   // y positions in timeline canvas
+const NOTE_R=10;
+
+function drawTimeline() {
+  const cvs=document.getElementById('timeline-canvas');
+  // Resize to container
+  cvs.width=cvs.clientWidth||700;
+  const ctx=cvs.getContext('2d');
+  const W=cvs.width, H=cvs.height;
+  ctx.clearRect(0,0,W,H);
+
+  // Background
+  ctx.fillStyle='#03001a'; ctx.fillRect(0,0,W,H);
+
+  // Beat grid
+  const beatSec=60/bpm;
+  const startBeat=Math.floor((scrollX/zoom)/beatSec);
+  const endBeat  =Math.ceil(((scrollX+W)/zoom)/beatSec)+1;
+  for(let b=startBeat; b<=endBeat; b++) {
+    const x=b*beatSec*zoom-scrollX;
+    const isMeasure=b%4===0;
+    ctx.strokeStyle=isMeasure?'rgba(0,255,255,0.3)':'rgba(0,255,255,0.08)';
+    ctx.lineWidth=isMeasure?1.5:0.5;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
+    if(isMeasure) {
+      ctx.fillStyle='rgba(0,255,255,0.4)';
+      ctx.font='9px Share Tech Mono';
+      ctx.fillText(b/4+1, x+3, 10);
+    }
+
+    // Sub-beat lines
+    if(snapDiv>4) {
+      const sub=beatSec/snapDiv*4;
+      for(let s=1;s<snapDiv/4;s++) {
+        const sx=x+s*sub*zoom;
+        ctx.strokeStyle='rgba(0,255,255,0.04)';
+        ctx.lineWidth=0.5;
+        ctx.beginPath(); ctx.moveTo(sx,0); ctx.lineTo(sx,H); ctx.stroke();
+      }
+    }
+  }
+
+  // Lane rows
+  LANE_COLORS.forEach((col,i)=>{
+    const y=LANE_Y[i];
+    ctx.strokeStyle=col+'44'; ctx.lineWidth=0.5;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+    // Lane label
+    ctx.fillStyle=col; ctx.font='bold 11px Orbitron,monospace';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(LANE_LABELS[i], 4, y);
+  });
+
+  // Notes
+  notes.forEach((n,idx)=>{
+    const x=n.time*zoom-scrollX;
+    if(x<-NOTE_R||x>W+NOTE_R) return;
+    const y=LANE_Y[n.lane];
+    const col=LANE_COLORS[n.lane];
+    // Glow
+    ctx.save();
+    ctx.shadowColor=col; ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.arc(x,y,NOTE_R,0,Math.PI*2);
+    ctx.fillStyle=col+'cc'; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.restore();
+    // Arrow label
+    ctx.fillStyle='#000'; ctx.font='bold 9px Orbitron,monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(LANE_LABELS[n.lane], x, y);
+  });
+
+  // Playhead
+  const phX=playhead*zoom-scrollX;
+  ctx.save();
+  ctx.shadowColor='#fff'; ctx.shadowBlur=8;
+  ctx.strokeStyle='#ffffff'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(phX,0); ctx.lineTo(phX,H); ctx.stroke();
+  // Playhead triangle
+  ctx.fillStyle='#ffffff';
+  ctx.beginPath(); ctx.moveTo(phX-6,0); ctx.lineTo(phX+6,0); ctx.lineTo(phX,10); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// ── Timeline interaction ──────────────────
+const tlCvs=document.getElementById('timeline-canvas');
+tlCvs.addEventListener('click', e=>{
+  const r=tlCvs.getBoundingClientRect();
+  const mx=e.clientX-r.left;
+  const my=e.clientY-r.top;
+  const t=(mx+scrollX)/zoom;
+  // Seek to clicked time
+  seek(t);
+});
+
+tlCvs.addEventListener('contextmenu', e=>{
+  e.preventDefault();
+  const r=tlCvs.getBoundingClientRect();
+  const mx=e.clientX-r.left;
+  const my=e.clientY-r.top;
+  const t=(mx+scrollX)/zoom;
+  // Find nearest note within 12px
+  let best=null; let bestD=12/zoom;
+  notes.forEach((n,i)=>{
+    const d=Math.abs(n.time-t);
+    if(d<bestD){ bestD=d; best=i; }
+  });
+  if(best!==null){ notes.splice(best,1); refreshNoteList(); drawTimeline(); }
+});
+
+// Scroll timeline horizontally
+tlCvs.addEventListener('wheel', e=>{
+  e.preventDefault();
+  scrollX=Math.max(0, scrollX+e.deltaY*0.8);
+  drawTimeline();
+}, {passive:false});
+
+// ── Stamp note at playhead ────────────────
+function stampNote(lane) {
+  let t=playhead;
+  if(snapDiv>0) {
+    const beatSec=60/bpm;
+    const subSec=beatSec/(snapDiv/4);
+    t=Math.round(t/subSec)*subSec;
+  }
+  // Deduplicate within 20ms of same lane
+  const dup=notes.some(n=>n.lane===lane&&Math.abs(n.time-t)<0.02);
+  if(!dup) {
+    notes.push({time:t, lane});
+    notes.sort((a,b)=>a.time-b.time);
+    refreshNoteList();
+    drawTimeline();
+  }
+}
+
+// ═══════════════════════════════════════════
+//  Controls
+// ═══════════════════════════════════════════
+function selectLane(l) {
+  activeLane=l;
+  document.querySelectorAll('.lane-btn').forEach((b,i)=>b.classList.toggle('selected',i===l));
+}
+function setSnap(d) {
+  snapDiv=d;
+  document.querySelectorAll('[id^=snap-]').forEach(b=>b.style.color='');
+  const active=document.getElementById('snap-'+d);
+  if(active) active.style.color='var(--cyan)';
+}
+function clearAllNotes() {
+  if(confirm('Clear all notes?')){ notes=[]; refreshNoteList(); drawTimeline(); }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  if(e.code==='Space'){ e.preventDefault(); togglePlay(); return; }
+  if(e.code==='KeyA'){ selectLane(0); stampNote(0); }
+  if(e.code==='KeyS'){ selectLane(1); stampNote(1); }
+  if(e.code==='KeyW'){ e.preventDefault(); selectLane(2); stampNote(2); }
+  if(e.code==='KeyD'){ selectLane(3); stampNote(3); }
+  if(e.code==='ArrowLeft')  seek(playhead-60/bpm);
+  if(e.code==='ArrowRight') seek(playhead+60/bpm);
+  if(e.code==='Home') jumpToStart();
+});
+
+// BPM / offset
+document.getElementById('bpm-input').addEventListener('input', e=>{ bpm=parseFloat(e.target.value)||128; drawTimeline(); });
+document.getElementById('offset-input').addEventListener('input', e=>{ offset=parseFloat(e.target.value)||0; });
+document.getElementById('zoom-slider').addEventListener('input', e=>{
+  zoom=parseInt(e.target.value);
+  document.getElementById('zoom-val').textContent=zoom+'px/s';
+  drawTimeline();
+});
+document.getElementById('speed-slider').addEventListener('input', e=>{
+  audioSpeed=parseInt(e.target.value)/100;
+  document.getElementById('speed-val').textContent=audioSpeed+'×';
+  if(isPlaying){ pause(); play(); }
+});
+
+// ═══════════════════════════════════════════
+//  Note list
+// ═══════════════════════════════════════════
+function refreshNoteList() {
+  const list=document.getElementById('note-list');
+  document.getElementById('note-count').textContent=notes.length+' notes';
+  list.innerHTML='';
+  [...notes].reverse().forEach((n,ri)=>{
+    const realIdx=notes.length-1-ri;
+    const col=LANE_COLORS[n.lane];
+    const div=document.createElement('div');
+    div.className='note-item';
+    div.innerHTML=`
+      <span class="ni-arrow" style="color:${col}">${LANE_LABELS[n.lane]}</span>
+      <span class="ni-time">${n.time.toFixed(3)}s &nbsp; beat ${(n.time/(60/bpm)+1).toFixed(2)}</span>
+      <button class="ni-del" onclick="deleteNote(${realIdx})">✕</button>
+    `;
+    div.addEventListener('click', ()=>seek(n.time));
+    list.appendChild(div);
+  });
+}
+function deleteNote(i){ notes.splice(i,1); refreshNoteList(); drawTimeline(); }
+
+// ═══════════════════════════════════════════
+//  Export / Import
+// ═══════════════════════════════════════════
+function exportChart() {
+  const chart={
+    title:   document.getElementById('song-title').value,
+    bpm:     parseFloat(document.getElementById('bpm-input').value)||128,
+    offset:  parseFloat(document.getElementById('offset-input').value)||0,
+    notes:   notes.map(n=>({time:parseFloat(n.time.toFixed(4)), lane:n.lane}))
+  };
+  document.getElementById('export-output').value=JSON.stringify(chart,null,2);
+}
+function copyChart() {
+  exportChart();
+  navigator.clipboard.writeText(document.getElementById('export-output').value)
+    .then(()=>alert('Copied to clipboard!'))
+    .catch(()=>alert('Select the text and copy manually.'));
+}
+function downloadChart() {
+  exportChart();
+  const blob=new Blob([document.getElementById('export-output').value],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(document.getElementById('song-title').value||'chart').replace(/\s+/g,'_')+'.json';
+  a.click();
+}
+function importChart() {
+  const raw=document.getElementById('export-output').value.trim();
+  try {
+    const c=JSON.parse(raw);
+    notes=c.notes||[];
+    document.getElementById('bpm-input').value=c.bpm||128;
+    document.getElementById('offset-input').value=c.offset||0;
+    document.getElementById('song-title').value=c.title||'';
+    bpm=c.bpm||128; offset=c.offset||0;
+    refreshNoteList(); drawTimeline();
+    alert('Chart imported! '+notes.length+' notes.');
+  } catch(e){ alert('Invalid JSON: '+e.message); }
+}
+
+// ═══════════════════════════════════════════
+//  Init
+// ═══════════════════════════════════════════
+window.addEventListener('load',()=>{
+  drawWaveform();
+  drawTimeline();
+  setSnap(4);
+  // Resize observer for timeline canvas
+  new ResizeObserver(()=>drawTimeline()).observe(tlCvs);
+});
+window.addEventListener('resize',()=>{ drawWaveform(); drawTimeline(); });
+</script>
+</body>
+</html>

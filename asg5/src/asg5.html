@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Three</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        background: #e8e4d8;
+        color: #333;
+        font-family: 'Segoe UI', sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        min-height: 100vh;
+      }
+
+      h1 { font-size: 1.6em; color: #3a5a3a; margin-bottom: 4px; letter-spacing: 1px; }
+      .subtitle { font-size: 0.82em; color: #777; margin-bottom: 6px; }
+      #numdot { font-size: 0.78em; color: #999; margin-bottom: 10px; font-family: monospace; }
+
+      /* ── Panel ───────────────────────────────────────────────────────── */
+      .panel {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        margin-bottom: 12px;
+        width: 100%;
+        max-width: 960px;
+      }
+
+      .ctrl-group {
+        background: #f5f2ea;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 7px 11px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        min-width: 170px;
+      }
+      .ctrl-group label {
+        font-size: 0.72em;
+        font-weight: bold;
+        color: #3a5a3a;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.81em;
+        color: #555;
+      }
+      input[type=range] { flex: 1; accent-color: #3a5a3a; cursor: pointer; }
+
+      .toggle-btn {
+        padding: 4px 11px;
+        border: 2px solid #aaa;
+        border-radius: 6px;
+        background: #f0ede4;
+        color: #555;
+        cursor: pointer;
+        font-size: 0.8em;
+        font-weight: bold;
+        transition: background .15s, border-color .15s, color .15s;
+        white-space: nowrap;
+      }
+      .toggle-btn:hover { background: #e0ddd4; }
+      .toggle-btn.active {
+        background: #3a5a3a;
+        border-color: #3a5a3a;
+        color: #fff;
+      }
+
+      /* ── Canvas ──────────────────────────────────────────────────────── */
+      #canvas-wrapper {
+        position: relative;
+        margin-bottom: 10px;
+        background: black;
+      }
+      #webgl { display: block; }
+      #crosshair {
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%,-50%);
+        color: white; font-size: 26px;
+        pointer-events: none; user-select: none;
+        text-shadow: 0 0 3px black; line-height: 1;
+      }
+      #hint {
+        position: absolute; bottom: 12px; left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,.45);
+        color: #eee; font-size: 0.78em;
+        padding: 4px 12px; border-radius: 5px;
+        pointer-events: none; user-select: none;
+        white-space: nowrap;
+      }
+      #fullscreenBtn {
+        padding: 7px 20px;
+        border: 2px solid #3a5a3a; border-radius: 8px;
+        background: #f0ede4; color: #3a5a3a;
+        cursor: pointer; font-size: 0.9em; font-weight: bold;
+        margin-top: 4px; transition: background .2s;
+      }
+      #fullscreenBtn:hover { background: #d4e8d4; }
+
+      #canvas-wrapper:fullscreen,
+      #canvas-wrapper:-webkit-full-screen {
+        display: flex; align-items: center; justify-content: center;
+        background: black;
+        width: 100vw !important; height: 100vh !important; margin: 0;
+      }
+    </style>
+
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/"
+      }
+    }
+    </script>
+  </head>
+
+  <body onload="">
+    <h1>Three</h1>
+    <p class="subtitle">Nick Lafredo &nbsp;—&nbsp; nlafredo@ucsc.edu</p>
+    <p id="numdot">—</p>
+
+    <div id="canvas-wrapper">
+      <canvas id="webgl" width="960" height="540"></canvas>
+      <div id="crosshair">+</div>
+      <div id="hint">Click to capture mouse &nbsp;|&nbsp; WASD move &nbsp;·&nbsp; Space/Ctrl up/down &nbsp;·&nbsp; Mouse look</div>
+    </div>
+
+    <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+
+
+    <script>
+      const ASPECT = 16 / 9;
+
+      function resizeCanvas() {
+        var wrapper = document.getElementById('canvas-wrapper');
+        var isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        var vw = isFS ? window.innerWidth  : Math.min(window.innerWidth - 40, 960);
+        var vh = isFS ? window.innerHeight : window.innerHeight * 0.65;
+        var w, h;
+        if (vw / vh > ASPECT) { h = Math.floor(vh); w = Math.floor(h * ASPECT); }
+        else                   { w = Math.floor(vw); h = Math.floor(w / ASPECT); }
+        var c = document.getElementById('webgl');
+        c.style.width = w + 'px'; c.style.height = h + 'px';
+        wrapper.style.width = w + 'px'; wrapper.style.height = h + 'px';
+      }
+
+      function toggleFullscreen() {
+        var wrapper = document.getElementById('canvas-wrapper');
+        if (!document.fullscreenElement && !document.webkitFullscreenElement)
+          (wrapper.requestFullscreen || wrapper.webkitRequestFullscreen).call(wrapper);
+        else
+          (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      }
+
+      document.addEventListener('fullscreenchange', function() {
+        resizeCanvas();
+        var btn = document.getElementById('fullscreenBtn');
+        if (btn) btn.textContent = document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+      });
+      document.addEventListener('webkitfullscreenchange', function() {
+        resizeCanvas();
+        var btn = document.getElementById('fullscreenBtn');
+        if (btn) btn.textContent = document.webkitFullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+      });
+      window.addEventListener('resize', resizeCanvas);
+      window.addEventListener('load',   resizeCanvas);
+    </script>
+
+
+  <script type="module" src="asg5.js"></script>
+
+  </body>
+</html>
