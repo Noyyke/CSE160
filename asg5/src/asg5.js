@@ -11,6 +11,23 @@ import { PointerLockControls } from 'three/addons/controls/PointerLockControls.j
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ─────────────────────────────────────────────
+//  ★ TUNING — tweak these values to taste
+// ─────────────────────────────────────────────
+const CFG = {
+  // Camera / movement
+  mouseSensitivity: 0.55,   // PointerLock speed (0.3 = slow, 1.0 = default)
+  moveSpeed:        9,       // exploration walk speed (units / second)
+
+  // World lighting  — multiply any value to brighten / dim that source
+  ambientIntensity: 1.2,    // ambient fill light
+  hemiIntensity:    0.9,    // sky/ground hemisphere
+  moonIntensity:    0.7,    // directional "moonlight"
+  floorSpotIntensity: 7,    // spotlight over the dance floor
+  cityPointBase:    2.5,    // neon glow on building signs
+  streetlampIntensity: 1.8, // street-lamp point lights
+};
+
+// ─────────────────────────────────────────────
 //  Constants
 // ─────────────────────────────────────────────
 const LANE_COUNT   = 4;
@@ -104,7 +121,7 @@ function makeGridTex(size=512, lines=16, bg=0x110022, line=0x00ffff) {
 
 function makeNeonTex(text, fg='#ff00cc', bg='#110011', size=256) {
   const c = document.createElement('canvas'); c.width=size; c.height=Math.floor(size/3);
-  const ctx = c.getContext('2d');
+  const ctx  = c.getContext('2d');
   ctx.fillStyle = bg; ctx.fillRect(0,0,c.width,c.height);
   ctx.font = `bold ${Math.floor(c.height*0.7)}px monospace`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -128,16 +145,16 @@ function makeArrowShape() {
 }
 
 // ─────────────────────────────────────────────
-//  Skybox
+//  Skybox  (procedural gradient + stars + nebula clouds)
 // ─────────────────────────────────────────────
 function buildSkybox() {
   const skyGeo = new THREE.SphereGeometry(300, 32, 16);
   const skyMat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     uniforms: {
-      topColor:    { value: new THREE.Color(0x000510) },
-      bottomColor: { value: new THREE.Color(0x1a0030) },
-      midColor:    { value: new THREE.Color(0x050025) },
+      topColor:    { value: new THREE.Color(0x000d28) },   // deep navy
+      bottomColor: { value: new THREE.Color(0x330055) },   // vivid deep-purple horizon
+      midColor:    { value: new THREE.Color(0x0d0050) },   // indigo mid-band
     },
     vertexShader: `
       varying vec3 vWorldPos;
@@ -152,44 +169,93 @@ function buildSkybox() {
       varying vec3 vWorldPos;
       void main(){
         float t = clamp((vWorldPos.y + 100.0)/200.0, 0.0, 1.0);
-        vec3 col = mix(bottomColor, midColor, smoothstep(0.0,0.3,t));
-        col = mix(col, topColor, smoothstep(0.3,1.0,t));
-        gl_FragColor = vec4(col,1.0);
+        vec3 col = mix(bottomColor, midColor, smoothstep(0.0, 0.35, t));
+        col = mix(col, topColor, smoothstep(0.35, 1.0, t));
+        gl_FragColor = vec4(col, 1.0);
       }`,
   });
   scene.add(new THREE.Mesh(skyGeo, skyMat));
 
+  // Stars — more of them, bigger, slight colour variation
+  const STAR_COUNT = 4000;
   const starGeo = new THREE.BufferGeometry();
-  const starPos = new Float32Array(2000*3);
-  for (let i=0; i<2000; i++) {
-    const theta = Math.random()*Math.PI*2;
-    const phi   = Math.acos(2*Math.random()-1);
+  const starPos = new Float32Array(STAR_COUNT * 3);
+  const starCol = new Float32Array(STAR_COUNT * 3);
+  const palette = [
+    [1.0, 1.0, 1.0],   // white
+    [0.6, 0.8, 1.0],   // icy blue
+    [1.0, 0.85, 0.6],  // warm yellow
+    [0.9, 0.5, 1.0],   // soft purple
+    [0.5, 1.0, 0.9],   // cyan
+  ];
+  for (let i = 0; i < STAR_COUNT; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi   = Math.acos(2 * Math.random() - 1);
     const r     = 280;
-    starPos[i*3]   = r*Math.sin(phi)*Math.cos(theta);
-    starPos[i*3+1] = r*Math.abs(Math.cos(phi));
-    starPos[i*3+2] = r*Math.sin(phi)*Math.sin(theta);
+    starPos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+    starPos[i*3+1] = r * Math.abs(Math.cos(phi));  // upper hemisphere only
+    starPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
+    const c = palette[Math.floor(Math.random() * palette.length)];
+    starCol[i*3]   = c[0];
+    starCol[i*3+1] = c[1];
+    starCol[i*3+2] = c[2];
   }
-  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos,3));
-  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color:0xffffff,size:0.8,sizeAttenuation:true})));
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  starGeo.setAttribute('color',    new THREE.BufferAttribute(starCol, 3));
+  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({
+    vertexColors: true,
+    size: 1.6,
+    sizeAttenuation: true,
+    transparent: true,
+    opacity: 0.92,
+  })));
+
+  // Nebula / aurora strips — large semi-transparent planes with gradient canvas textures
+  const nebulaData = [
+    { color: '#ff00cc', yRot: 0.4,  xRot: 0.18, x:  60, y: 90, z: -180 },
+    { color: '#00aaff', yRot: -0.5, xRot: 0.12, x: -80, y: 70, z: -160 },
+    { color: '#8800ff', yRot: 1.1,  xRot: 0.08, x:  20, y: 110,z:  150 },
+  ];
+  nebulaData.forEach(n => {
+    const cvs = document.createElement('canvas'); cvs.width=512; cvs.height=256;
+    const ctx  = cvs.getContext('2d');
+    const grad = ctx.createLinearGradient(0,0,512,256);
+    grad.addColorStop(0,   'rgba(0,0,0,0)');
+    grad.addColorStop(0.4, n.color + 'aa');
+    grad.addColorStop(0.6, n.color + '88');
+    grad.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,512,256);
+    const tex = new THREE.CanvasTexture(cvs);
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(200, 100),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.28,
+        side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })
+    );
+    mesh.position.set(n.x, n.y, n.z);
+    mesh.rotation.y = n.yRot;
+    mesh.rotation.x = n.xRot;
+    scene.add(mesh);
+  });
 }
 
 // ─────────────────────────────────────────────
 //  Lights
 // ─────────────────────────────────────────────
-const ambientLight = new THREE.AmbientLight(0x110033, 0.6);
+const ambientLight = new THREE.AmbientLight(0x110033, CFG.ambientIntensity);
 scene.add(ambientLight);
 
-const hemiLight = new THREE.HemisphereLight(0x0a0020, 0x220044, 0.5);
+const hemiLight = new THREE.HemisphereLight(0x1a0040, 0x330055, CFG.hemiIntensity);
 scene.add(hemiLight);
 
-const moonLight = new THREE.DirectionalLight(0x8899ff, 0.4);
+const moonLight = new THREE.DirectionalLight(0xaabbff, CFG.moonIntensity);
 moonLight.position.set(30, 80, 20);
 moonLight.castShadow = true;
 moonLight.shadow.mapSize.set(2048,2048);
 moonLight.shadow.camera.near = 1;
 moonLight.shadow.camera.far  = 300;
 moonLight.shadow.camera.left = moonLight.shadow.camera.bottom = -80;
-moonLight.shadow.camera.right= moonLight.shadow.camera.top   =  80;
+moonLight.shadow.camera.right= moonLight.shadow.camera.top    =  80;
 scene.add(moonLight);
 
 let floorSpot = null;
@@ -282,7 +348,7 @@ function buildCity() {
         cityGroup.add(sign);
 
         const col = LANE_COLORS[Math.floor(rng()*4)];
-        const pl = new THREE.PointLight(col, 1.5+rng()*2, 20);
+        const pl = new THREE.PointLight(col, CFG.cityPointBase + rng()*2, 20);
         pl.position.set(x, h+1, z);
         cityGroup.add(pl);
       }
@@ -324,11 +390,11 @@ function makeStreetlight(x,y,z) {
   g.add(arm);
   const lamp = new THREE.Mesh(
     new THREE.SphereGeometry(0.18,8,8),
-    new THREE.MeshStandardMaterial({color:0xffffff,emissive:new THREE.Color(0x88ccff),emissiveIntensity:3})
+    new THREE.MeshStandardMaterial({color:0xffffff,emissive:new THREE.Color(0xaaddff),emissiveIntensity:4})
   );
   lamp.position.set(x+1.5,5,z);
   g.add(lamp);
-  const pl = new THREE.PointLight(0x88ccff, 1.2, 18);
+  const pl = new THREE.PointLight(0xaaddff, CFG.streetlampIntensity, 22);
   pl.position.set(x+1.5,4.8,z);
   g.add(pl);
   return g;
@@ -387,19 +453,19 @@ function buildDanceFloor() {
   tBase.position.set(0,0.25,-8);
   scene.add(tBase);
 
-  floorSpot = new THREE.SpotLight(0xffffff,4,50,Math.PI/5,0.3,1);
+  floorSpot = new THREE.SpotLight(0xffffff, CFG.floorSpotIntensity, 55, Math.PI/5, 0.3, 1);
   floorSpot.position.set(0,20,0);
   floorSpot.target.position.set(0,0,-8);
   floorSpot.castShadow=true;
   scene.add(floorSpot);
   scene.add(floorSpot.target);
 
-  const spot2 = new THREE.SpotLight(0xff00cc,2,30,Math.PI/6,0.5,1);
+  const spot2 = new THREE.SpotLight(0xff00cc, 3, 35, Math.PI/6, 0.5, 1);
   spot2.position.set(-8,15,-5);
   spot2.target.position.set(0,0,-8);
   scene.add(spot2); scene.add(spot2.target);
 
-  const spot3 = new THREE.SpotLight(0x00ffcc,2,30,Math.PI/6,0.5,1);
+  const spot3 = new THREE.SpotLight(0x00ffcc, 3, 35, Math.PI/6, 0.5, 1);
   spot3.position.set(8,15,-5);
   spot3.target.position.set(0,0,-8);
   scene.add(spot3); scene.add(spot3.target);
@@ -464,11 +530,12 @@ function buildTargetZones() {
     const mesh = new THREE.Mesh(geo, mat);
     geo.center();
     mesh.rotation.z = LANE_ROT_Z[i];
-    mesh.position.set(LANE_X[i], 0.36, -8);
+    // ★ Raised from 0.36 to 0.70 to clear floor layout
+    mesh.position.set(LANE_X[i], 0.7, -8);
     scene.add(mesh);
 
     const pl = new THREE.PointLight(LANE_COLORS[i], 0, 4);
-    pl.position.set(LANE_X[i], 0.8, -8);
+    pl.position.set(LANE_X[i], 1.1, -8);
     scene.add(pl);
 
     targetZones.push(mesh);
@@ -623,7 +690,8 @@ function updateHoldBodyVisual(arrow) {
   body.material = _holdBodyMats[lane];
   body.rotation.z = LANE_ROT_Z[lane];
   body.scale.set(HOLD_BODY_SCALE, HOLD_BODY_SCALE, len);
-  body.position.set(LANE_X[lane], 0.48, headZ - len * 0.5);
+  // ★ Raised trail height to 0.82 to align perfectly with the target anchor
+  body.position.set(LANE_X[lane], 0.82, headZ - len * 0.5);
   body.visible = true;
 }
 
@@ -686,7 +754,42 @@ window.addEventListener('keyup',  e=>{ keysDown[e.key.toLowerCase()]=false; });
 //  Pointer Lock / FPS Controls
 // ─────────────────────────────────────────────
 const controls = new PointerLockControls(camera, renderer.domElement);
+controls.pointerSpeed = CFG.mouseSensitivity;
 scene.add(camera);
+
+const _LOOK_SMOOTH = 0.22;   // 0 = instant, 1 = locked
+let _rawYaw = 0, _rawPitch = 0;
+
+// Initialize looking values on setup to avoid jarring snapping jumps
+const initialEuler = new THREE.Euler(0, 0, 0, 'YXZ').setFromQuaternion(camera.quaternion, 'YXZ');
+_rawYaw = initialEuler.y;
+_rawPitch = initialEuler.x;
+
+// Handle pointer events cleanly
+renderer.domElement.addEventListener('mousemove', e => {
+  if(!controls.isLocked) return;
+  _rawYaw   -= e.movementX * CFG.mouseSensitivity * 0.002;
+  _rawPitch -= e.movementY * CFG.mouseSensitivity * 0.002;
+  _rawPitch  = Math.max(-Math.PI/2, Math.min(Math.PI/2, _rawPitch));
+}, false);
+
+// Disable the fallback internal handler to maintain single source of truth control
+if(controls._onMouseMove) {
+  renderer.domElement.removeEventListener('mousemove', controls._onMouseMove);
+}
+
+// Clean camera look calculations to drop the rubber-banding / floating spring effect
+function applySmoothLook() {
+  if(!controls.isLocked && gameState !== STATES.PLAYING) return;
+  const currentEuler = new THREE.Euler(0, 0, 0, 'YXZ').setFromQuaternion(camera.quaternion, 'YXZ');
+  
+  // Directly interpolate frame rotations instead of feedback looping camera properties
+  let targetYaw = currentEuler.y + (_rawYaw - currentEuler.y) * (1 - _LOOK_SMOOTH);
+  let targetPitch = currentEuler.x + (_rawPitch - currentEuler.x) * (1 - _LOOK_SMOOTH);
+  
+  targetPitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, targetPitch));
+  camera.quaternion.setFromEuler(new THREE.Euler(targetPitch, targetYaw, 0, 'YXZ'));
+}
 
 const vel   = new THREE.Vector3();
 const dir   = new THREE.Vector3();
@@ -694,7 +797,7 @@ let moveF=false,moveB=false,moveL=false,moveR=false,moveU=false,moveD=false;
 
 document.addEventListener('keydown', e=>{
   if(gameState===STATES.PLAYING) return;
-  if(gameState===STATES.SONGSELECT) return; // let songselect handler handle keys
+  if(gameState===STATES.SONGSELECT) return;
   if(e.code==='KeyW'||e.code==='ArrowUp')    moveF=true;
   if(e.code==='KeyS'||e.code==='ArrowDown')  moveB=true;
   if(e.code==='KeyA'||e.code==='ArrowLeft')  moveL=true;
@@ -759,12 +862,10 @@ function updateHUD() {
 //  Song Select Screen
 // ─────────────────────────────────────────────
 
-// Song manifest for the select screen
-let songManifest = [];   // { id, title, artist, chart, audio, _chartData, _audioBuffer, _audioDuration }
+let songManifest = [];
 
 function openSongSelectScreen() {
   gameState = STATES.SONGSELECT;
-  // Unlock pointer controls if locked
   if(controls.isLocked) {
     _programmingUnlock = true;
     controls.unlock();
@@ -773,7 +874,6 @@ function openSongSelectScreen() {
   promptEl.style.display = 'none';
   resultEl.style.display = 'none';
 
-  // Push the current manifest to the HTML-side UI
   if(window.ssSetManifest) window.ssSetManifest(songManifest);
   if(window.openSongSelect) window.openSongSelect();
 }
@@ -799,7 +899,6 @@ let _playPixelRatio = 1;
 function enterGame() {
   if(gameState===STATES.PLAYING) return;
 
-  // Close song select overlay if open
   songSelEl.style.display = 'none';
 
   exploreCamPos.copy(camera.position);
@@ -860,7 +959,7 @@ function restoreExploreRendering() {
   moonLight.castShadow = true;
   renderer.shadowMap.enabled = true;
   renderer.setPixelRatio(_playPixelRatio);
-  if(floorSpot) floorSpot.intensity = 4;
+  if(floorSpot) floorSpot.intensity = CFG.floorSpotIntensity;
 }
 
 function exitGame() {
@@ -872,6 +971,9 @@ function exitGame() {
   [...activeArrows].forEach(a=>recycleArrow(a));
   camera.position.copy(exploreCamPos);
   camera.quaternion.copy(exploreCamQuat);
+  const euler = new THREE.Euler(0,0,0,'YXZ');
+  euler.setFromQuaternion(exploreCamQuat,'YXZ');
+  _rawYaw = euler.y; _rawPitch = euler.x;
   hudEl.style.display='none';
   promptEl.style.display='none';
   resultEl.style.display='none';
@@ -886,13 +988,11 @@ function endGame() {
   restoreExploreRendering();
   [...activeArrows].forEach(a=>recycleArrow(a));
 
-  // Calculate grade
   const acc = totalNotes>0 ? (perfects+goods*0.5)/totalNotes : 0;
   let grade='F';
   if(acc>=0.95) grade='S'; else if(acc>=0.85) grade='A';
   else if(acc>=0.7) grade='B'; else if(acc>=0.5) grade='C'; else grade='D';
 
-  // Save hi-score
   const scoreData = { score, grade, maxCombo, perfects, goods, misses };
   if(window.nrSaveHiScore) window.nrSaveHiScore(activeSongId, scoreData);
 
@@ -914,7 +1014,8 @@ function spawnNote({ lane, time, duration = 0 }) {
   const st         = songTime();
   const spawnTime  = time - travelTime;
   const isHold     = duration > 0;
-  arrow.position.set(LANE_X[lane], 0.5, arrowZAtSongTime(st, spawnTime));
+  // ★ Raised active notes height from 0.5 to 0.84 to clean structural layering
+  arrow.position.set(LANE_X[lane], 0.84, arrowZAtSongTime(st, spawnTime));
   arrow.userData.spawnTime   = spawnTime;
   arrow.userData.targetTime  = time;
   arrow.userData.endTime     = time + duration;
@@ -1360,21 +1461,16 @@ function animate() {
     }
   }
 
-  // FPS movement (only when exploring / at prompt, not in song select)
   if(controls.isLocked && (gameState===STATES.EXPLORE||gameState===STATES.PROMPT)) {
-    const speed = 8;
-    vel.x -= vel.x * 8 * dt;
-    vel.z -= vel.z * 8 * dt;
-    vel.y -= vel.y * 8 * dt;
-    if(moveF) vel.z += speed * 10 * dt;
-    if(moveB) vel.z -= speed * 10 * dt;
-    if(moveL) vel.x -= speed * 10 * dt;
-    if(moveR) vel.x += speed * 10 * dt;
-    if(moveU) vel.y += speed * 6  * dt;
-    if(moveD) vel.y -= speed * 6  * dt;
-    controls.moveForward(vel.z * dt);
-    controls.moveRight(vel.x * dt);
-    camera.position.y = Math.max(1.7, camera.position.y + vel.y * dt);
+    applySmoothLook();
+    const spd = CFG.moveSpeed * dt;
+    if(moveF) controls.moveForward( spd);
+    if(moveB) controls.moveForward(-spd);
+    if(moveL) controls.moveRight(-spd);
+    if(moveR) controls.moveRight( spd);
+    if(moveU) camera.position.y += spd * 0.7;
+    if(moveD) camera.position.y -= spd * 0.7;
+    camera.position.y = Math.max(1.7, camera.position.y);
 
     _pos2D.set(camera.position.x, camera.position.z);
     const dist=_pos2D.distanceTo(_floor2D);
@@ -1427,7 +1523,8 @@ function animate() {
       const arrow=activeArrows[i];
       const elapsed=st - arrow.userData.spawnTime;
       arrow.position.z = arrowZAtSongTime(st, arrow.userData.spawnTime);
-      arrow.position.y=0.5+Math.sin(elapsed*3)*0.04;
+      // ★ Modified base height offset to bounce smoothly relative to its raised 0.84 position
+      arrow.position.y=0.84+Math.sin(elapsed*3)*0.04;
 
       if(arrow.userData.isHold) {
         updateHoldBodyVisual(arrow);
@@ -1467,7 +1564,7 @@ function animate() {
 animate();
 
 // ─────────────────────────────────────────────
-//  loadSong — fetch chart + audio, cache on manifest entry
+//  loadSong
 // ─────────────────────────────────────────────
 const SONGS_BASE_JS = new URL('../songs/', import.meta.url).href;
 
@@ -1503,7 +1600,7 @@ async function loadSong(chartUrl, audioUrl) {
 }
 
 // ─────────────────────────────────────────────
-//  Load song library manifest for the select screen
+//  Load song library manifest
 // ─────────────────────────────────────────────
 async function loadManifest() {
   try {
@@ -1512,13 +1609,11 @@ async function loadManifest() {
     const data = await res.json();
     const songs = data.songs || [];
 
-    // Pre-fetch all chart JSONs (small files) so the select screen has note counts
     for(const song of songs) {
       try {
         const chartUrl = new URL(song.chart, SONGS_BASE_JS).href;
         const res2 = await fetch(chartUrl);
         if(res2.ok) song._chartData = await res2.json();
-        // Audio URLs resolved lazily by the select screen on hover/preview
         song.audio = song.audio ? new URL(song.audio, SONGS_BASE_JS).href : null;
         song.chart = chartUrl;
       } catch(e) { /* ignore */ }
@@ -1549,7 +1644,6 @@ window.NeonRhythm = {
   setTimingLatency(sec) { audioHitLatency = Number(sec) || 0; },
   getTimingLatency: ()=>audioHitLatency,
 
-  /** Set which song id will receive the hi-score after endGame() */
   setActiveSongId(id) { activeSongId = id || 'random'; },
 
   openSongSelect: openSongSelectScreen,
