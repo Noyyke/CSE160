@@ -1318,7 +1318,13 @@ function onResize() {
 // ─────────────────────────────────────────────
 //  Main Loop
 // ─────────────────────────────────────────────
-const clock = new THREE.Clock();
+const clock = (() => {
+  let _start = performance.now(), _prev = _start;
+  return {
+    getDelta()       { const now = performance.now(); const d = (now - _prev) / 1000; _prev = now; return d; },
+    getElapsedTime() { return (performance.now() - _start) / 1000; },
+  };
+})();
 const _pos2D   = new THREE.Vector2();
 const _floor2D = new THREE.Vector2(FLOOR_POS.x, FLOOR_POS.z);
 
@@ -1463,7 +1469,7 @@ animate();
 // ─────────────────────────────────────────────
 //  loadSong — fetch chart + audio, cache on manifest entry
 // ─────────────────────────────────────────────
-const SONGS_BASE_JS = new URL('../../songs/', import.meta.url).href;
+const SONGS_BASE_JS = new URL('../songs/', import.meta.url).href;
 
 async function loadSong(chartUrl, audioUrl) {
   const chartRes = await fetch(chartUrl);

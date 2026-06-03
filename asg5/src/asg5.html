@@ -519,6 +519,33 @@
       .ss-list::-webkit-scrollbar-track { background: transparent; }
       .ss-list::-webkit-scrollbar-thumb { background: rgba(0,255,255,0.25); border-radius: 2px; }
 
+      /* Loading placeholder */
+      .ss-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 30px;
+        color: #334;
+        font-size: 0.8em;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .ss-loading-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: var(--cyan);
+        display: inline-block;
+        animation: loadingPulse 1s ease-in-out infinite;
+      }
+      .ss-loading-dot:nth-child(2) { animation-delay: 0.2s; background: var(--pink); }
+      .ss-loading-dot:nth-child(3) { animation-delay: 0.4s; background: var(--green); }
+      @keyframes loadingPulse {
+        0%,100% { opacity: 0.2; transform: scale(0.8); }
+        50% { opacity: 1; transform: scale(1.2); }
+      }
+      .ss-loading-dots { display: flex; gap: 6px; }
+
       /* Individual song card */
       .ss-card {
         position: relative;
@@ -1192,15 +1219,24 @@
       //  SONG SELECT SCREEN LOGIC
       // ═════════════════════════════════════════
 
-      const SONGS_BASE_SS = new URL('../songs/', window.location.href).href;
-      let ssManifest = [];         // { id, title, artist, chart, audio, _chartData, _audioBuffer }
-      let ssFocused  = -1;         // index into ssCards array (0 = random, 1+ = songs)
-      let ssCards    = [];         // DOM elements
+      // ssManifest is the authoritative list for the select screen.
+      // It is populated by window.ssSetManifest(), called from asg5.js right
+      // before window.openSongSelect(). The entries already have absolute URLs
+      // for .audio and .chart (resolved by loadManifest in asg5.js), and
+      // .chartData pre-fetched. We never call NeonRhythm.getManifest() here
+      // to avoid the race where NeonRhythm hasn't finished loading yet.
+      let ssManifest = [];
+      let ssFocused  = -1;   // index into ssCards (0 = random, 1+ = songs)
+      let ssCards    = [];   // { el, type, id, song? }
+      let ssIsOpen   = false;
+
+      // Preview audio state
       let ssPreviewCtx    = null;
       let ssPreviewSource = null;
       let ssPreviewGain   = null;
       let ssPreviewTimer  = null;
-      let ssPreviewIdx    = -1;
+      let ssPreviewIdx    = -1;   // card index currently previewing
+      let ssPreviewPending = -1;  // card index whose audio is being fetched
 
       // High score storage
       function getHiScore(id) {
@@ -1220,30 +1256,44 @@
         }
       };
 
+      // ── Open / close ──
       async function openSongSelect() {
+        ssIsOpen = true;
         const ss = document.getElementById('hud-songselect');
         ss.style.display = 'flex';
-        buildSongSelectCards();
-        // Focus first item (random)
-        focusSsCard(0);
         document.getElementById('hud-result').style.display = 'none';
         document.getElementById('hud-prompt').style.display = 'none';
+        buildSongSelectCards();
+        focusSsCard(0);
       }
 
       function closeSongSelect() {
+        ssIsOpen = false;
         stopPreview();
         document.getElementById('hud-songselect').style.display = 'none';
       }
 
+      // ── Build card list ──
+      // Always reads from ssManifest (set by window.ssSetManifest before openSongSelect).
       function buildSongSelectCards() {
         const list = document.getElementById('ss-list');
         list.innerHTML = '';
         ssCards = [];
+        ssFocused = -1;
 
-        // Fetch fresh manifest from NeonRhythm if available
-        const manifest = (window.NeonRhythm && window.NeonRhythm.getManifest)
-          ? window.NeonRhythm.getManifest()
-          : ssManifest;
+        // ── Loading state ──
+        if(ssManifest.length === 0) {
+          list.innerHTML = `
+            <div class="ss-loading">
+              <div class="ss-loading-dots">
+                <span class="ss-loading-dot"></span>
+                <span class="ss-loading-dot"></span>
+                <span class="ss-loading-dot"></span>
+              </div>
+              <span>Loading song library…</span>
+            </div>`;
+          // Still add the random card so there's always something playable
+        }
 
         // ── Random card (always first) ──
         const randomCard = document.createElement('div');
@@ -1255,7 +1305,6 @@
             <div class="ss-card-artist">Auto-generated arrows at any BPM</div>
             <div class="ss-card-meta">
               <span class="ss-card-bpm">∞ BPM</span>
-              <span class="ss-card-hi" id="ss-hi-random">—</span>
             </div>
           </div>
           <div class="ss-preview-badge" id="ss-badge-0"></div>
@@ -1265,12 +1314,13 @@
         list.appendChild(randomCard);
         ssCards.push({ el: randomCard, type: 'random', id: 'random' });
 
-        // ── Song cards ──
-        manifest.forEach((song, i) => {
+        // ── Song cards from manifest ──
+        ssManifest.forEach((song, i) => {
           const cardIdx = i + 1;
           const hi = getHiScore(song.id);
-          const bpmStr = song._chartData?.bpm ? song._chartData.bpm + ' BPM' : '? BPM';
-          const noteStr = song._chartData ? song._chartData.notes.length + ' notes' : '';
+          const cd = song._chartData;
+          const bpmStr = cd?.bpm ? cd.bpm + ' BPM' : '? BPM';
+          const noteStr = cd ? cd.notes.length + ' notes' : '';
 
           const card = document.createElement('div');
           card.className = 'ss-card';
@@ -1294,20 +1344,25 @@
         });
       }
 
+      // ── Focus a card (keyboard or hover) ──
       function focusSsCard(idx) {
         if(idx < 0 || idx >= ssCards.length) return;
-        if(ssFocused === idx) return; // already focused — don't restart preview
+        if(ssFocused === idx) return;
 
         ssFocused = idx;
         ssCards.forEach((c, i) => c.el.classList.toggle('focused', i === idx));
+        updateDetailPanel(ssCards[idx]);
 
-        const entry = ssCards[idx];
-        updateDetailPanel(entry);
-        startPreview(idx);
+        // Debounce: start preview after a short hover so rapid scrolling
+        // doesn't fire a dozen fetches.
+        clearTimeout(_previewDebounce);
+        _previewDebounce = setTimeout(()=> startPreview(idx), 120);
       }
+      let _previewDebounce = null;
 
+      // ── Detail panel ──
       function updateDetailPanel(entry) {
-        const detail = document.getElementById('ss-detail');
+        const detail   = document.getElementById('ss-detail');
         const titleEl  = document.getElementById('ss-det-title');
         const artistEl = document.getElementById('ss-det-artist');
         const statsEl  = document.getElementById('ss-det-stats');
@@ -1316,7 +1371,7 @@
 
         if(entry.type === 'random') {
           detail.classList.add('random-mode');
-          titleEl.textContent = 'RANDOM MODE';
+          titleEl.textContent  = 'RANDOM MODE';
           artistEl.textContent = 'Infinite auto-generated arrows';
           statsEl.innerHTML = `
             <div class="ss-stat"><span class="s-val">∞</span><span class="s-lbl">Notes</span></div>
@@ -1335,11 +1390,13 @@
           titleEl.textContent  = song.title;
           artistEl.textContent = song.artist || '';
 
-          const bpm     = cd?.bpm ?? '?';
-          const notes   = cd?.notes?.length ?? '?';
-          const holds   = cd ? cd.notes.filter(n=>(n.duration||0)>0).length : '?';
-          const durSec  = song._audioDuration;
-          const durStr  = durSec ? `${Math.floor(durSec/60)}:${String(Math.round(durSec%60)).padStart(2,'0')}` : '?';
+          const bpm   = cd?.bpm ?? '?';
+          const notes = cd?.notes?.length ?? '?';
+          const holds = cd ? cd.notes.filter(n=>(n.duration||0)>0).length : '?';
+          const durSec = song._audioDuration;
+          const durStr = durSec
+            ? `${Math.floor(durSec/60)}:${String(Math.round(durSec%60)).padStart(2,'0')}`
+            : '?';
 
           statsEl.innerHTML = `
             <div class="ss-stat"><span class="s-val">${bpm}</span><span class="s-lbl">BPM</span></div>
@@ -1357,7 +1414,7 @@
       }
 
       function hiScoreHTML(hi) {
-        const gradeColor = hi.grade === 'S' ? '#ffcc00' : hi.grade === 'A' ? '#00ff88' : '#aac';
+        const gradeColor = hi.grade==='S' ? '#ffcc00' : hi.grade==='A' ? '#00ff88' : '#aac';
         return `
           <div class="ss-hiscore-box">
             <div class="ss-hiscore-label">⭐ Best Score</div>
@@ -1376,122 +1433,216 @@
       }
 
       // ── Preview audio ──
+      // Lazy-loads the audio buffer for a song card, caches it on song._audioBuffer,
+      // then plays a ~8-second snippet starting ~30% into the track.
       async function startPreview(cardIdx) {
+        // Stop whatever is currently playing
         stopPreview();
-        ssPreviewIdx = cardIdx;
 
         const entry = ssCards[cardIdx];
-        if(!entry || entry.type === 'random') return; // no audio for random
+        if(!entry || entry.type === 'random') return;  // no audio for random
 
         const song = entry.song;
-        // Need audio buffer — load it if not cached
+        if(!song.audio) return;  // no audio URL at all
+
+        ssPreviewPending = cardIdx;
+
+        // Lazy-init the shared AudioContext for previews
+        if(!ssPreviewCtx) {
+          ssPreviewCtx = new (window.AudioContext||window.webkitAudioContext)();
+        }
+        if(ssPreviewCtx.state === 'suspended') {
+          await ssPreviewCtx.resume();
+        }
+
+        // Fetch & decode if not cached
         let buf = song._audioBuffer;
-        if(!buf && song.audio) {
+        if(!buf) {
           try {
-            if(!ssPreviewCtx) ssPreviewCtx = new (window.AudioContext||window.webkitAudioContext)();
-            const url = new URL(song.audio, SONGS_BASE_SS).href;
-            const res = await fetch(url);
-            if(!res.ok) return;
+            // song.audio is already an absolute URL (resolved in asg5.js loadManifest)
+            const res = await fetch(song.audio);
+            if(!res.ok) throw new Error(`HTTP ${res.status}`);
             const arr = await res.arrayBuffer();
             buf = await ssPreviewCtx.decodeAudioData(arr);
-            song._audioBuffer = buf;
+            song._audioBuffer  = buf;
             song._audioDuration = buf.duration;
-            // Refresh detail panel duration now that we have it
+            // Refresh duration in detail panel if this card is still focused
             if(ssFocused === cardIdx) updateDetailPanel(entry);
-          } catch(e) { return; }
+          } catch(e) {
+            console.warn('Preview load failed for', song.title, e);
+            ssPreviewPending = -1;
+            return;
+          }
         }
-        if(!buf) return;
-        // Check we're still on the same card after async load
-        if(ssPreviewIdx !== cardIdx) return;
 
-        if(!ssPreviewCtx) ssPreviewCtx = new (window.AudioContext||window.webkitAudioContext)();
-        if(ssPreviewCtx.state === 'suspended') await ssPreviewCtx.resume();
+        // Abort if the user moved to a different card while we were fetching
+        if(ssPreviewPending !== cardIdx) return;
+        ssPreviewPending = -1;
 
-        // Start ~30% into the track, play for 8 seconds
-        const startAt = Math.min(buf.duration * 0.3, Math.max(0, buf.duration - 9));
-        ssPreviewGain   = ssPreviewCtx.createGain();
+        // Play a snippet: start at 30% of the track, fade in/out over 8 s
+        const startAt = Math.min(buf.duration * 0.30, Math.max(0, buf.duration - 9));
+
+        ssPreviewGain = ssPreviewCtx.createGain();
         ssPreviewGain.gain.setValueAtTime(0, ssPreviewCtx.currentTime);
-        ssPreviewGain.gain.linearRampToValueAtTime(0.55, ssPreviewCtx.currentTime + 0.8);
+        ssPreviewGain.gain.linearRampToValueAtTime(0.55, ssPreviewCtx.currentTime + 1.0);
+        // Fade out starting at 6.5 s, silence at 8 s
+        ssPreviewGain.gain.setValueAtTime(0.55, ssPreviewCtx.currentTime + 6.5);
+        ssPreviewGain.gain.linearRampToValueAtTime(0, ssPreviewCtx.currentTime + 8.0);
         ssPreviewGain.connect(ssPreviewCtx.destination);
 
         ssPreviewSource = ssPreviewCtx.createBufferSource();
         ssPreviewSource.buffer = buf;
         ssPreviewSource.connect(ssPreviewGain);
         ssPreviewSource.start(0, startAt);
+        ssPreviewIdx = cardIdx;
 
-        // Fade out before 8 second mark
-        ssPreviewGain.gain.setValueAtTime(0.55, ssPreviewCtx.currentTime + 6.5);
-        ssPreviewGain.gain.linearRampToValueAtTime(0, ssPreviewCtx.currentTime + 8);
+        // Auto-stop after 8.2 s (a little after the fade finishes)
         ssPreviewTimer = setTimeout(()=> stopPreview(), 8200);
 
-        // Show badge
-        const badge = document.getElementById(`ss-badge-${cardIdx}`);
-        if(badge) { badge.textContent = '♫ PREVIEW'; badge.classList.add('visible'); }
+        // Show the ♫ PREVIEW badge on the card
+        showPreviewBadge(cardIdx, true);
       }
 
       function stopPreview() {
-        if(ssPreviewTimer) { clearTimeout(ssPreviewTimer); ssPreviewTimer = null; }
+        clearTimeout(ssPreviewTimer);
+        ssPreviewTimer = null;
+        ssPreviewPending = -1;
+
         if(ssPreviewSource) {
-          try { ssPreviewSource.stop(); ssPreviewSource.disconnect(); } catch(e) {}
+          try { ssPreviewSource.stop(); } catch(e) {}
+          try { ssPreviewSource.disconnect(); } catch(e) {}
           ssPreviewSource = null;
         }
-        if(ssPreviewGain) { try { ssPreviewGain.disconnect(); } catch(e) {} ssPreviewGain = null; }
-        // Hide all badges
-        document.querySelectorAll('.ss-preview-badge').forEach(b=>b.classList.remove('visible'));
+        if(ssPreviewGain) {
+          try { ssPreviewGain.disconnect(); } catch(e) {}
+          ssPreviewGain = null;
+        }
+
+        // Hide all preview badges
+        document.querySelectorAll('.ss-preview-badge').forEach(b => b.classList.remove('visible'));
         ssPreviewIdx = -1;
       }
 
-      function songSelectPlay() {
+      function showPreviewBadge(cardIdx, visible) {
+        const badge = document.getElementById(`ss-badge-${cardIdx}`);
+        if(badge) {
+          badge.textContent = '♫ PREVIEW';
+          badge.classList.toggle('visible', visible);
+        }
+      }
+
+      // ── Play the selected song ──
+      async function songSelectPlay() {
         if(ssFocused < 0 || ssFocused >= ssCards.length) return;
         stopPreview();
         const entry = ssCards[ssFocused];
-        closeSongSelect();
+
         if(entry.type === 'random') {
+          closeSongSelect();
           if(window.NeonRhythm) {
             window.NeonRhythm.setMode('random');
             window.NeonRhythm.enterGame();
           }
+          return;
+        }
+
+        // ── Chart song ──
+        const song = entry.song;
+        if(!window.NeonRhythm) return;
+
+        // If _chartData is missing (shouldn't happen, but be safe) fall back to loadSong
+        if(!song._chartData) {
+          closeSongSelect();
+          try {
+            await window.NeonRhythm.loadSong(song.chart, song.audio);
+          } catch(e) {
+            console.error('Failed to load song:', e);
+            return;
+          }
+          window.NeonRhythm.setActiveSongId(song.id);
+          window.NeonRhythm.enterGame();
+          return;
+        }
+
+        // We already have the chart data from loadManifest — load it directly.
+        // This sets gameMode = 'chart' inside asg5.js.
+        window.NeonRhythm.loadChart(song._chartData);
+
+        // Hand over the audio buffer if it was already decoded during preview,
+        // otherwise fetch + decode it now (loadSong handles both).
+        if(song._audioBuffer) {
+          window.NeonRhythm.loadAudio(song._audioBuffer);
+          closeSongSelect();
+          window.NeonRhythm.setActiveSongId(song.id);
+          window.NeonRhythm.enterGame();
+        } else if(song.audio) {
+          // Audio not yet cached — show loading state, fetch, then start
+          const playBtn = document.getElementById('ss-play-btn');
+          const origText = playBtn.textContent;
+          playBtn.textContent = '⏳ Loading…';
+          playBtn.style.pointerEvents = 'none';
+          try {
+            // loadSong re-loads the chart too (harmless) and decodes audio
+            const info = await window.NeonRhythm.loadSong(song.chart, song.audio);
+            // Cache the decoded buffer for next time
+            // (asg5.js stores it in songBuffer; we also keep a ref here)
+            song._audioDuration = info.duration;
+          } catch(e) {
+            console.error('Audio load failed:', e);
+            playBtn.textContent = origText;
+            playBtn.style.pointerEvents = '';
+            return;
+          }
+          closeSongSelect();
+          window.NeonRhythm.setActiveSongId(song.id);
+          window.NeonRhythm.enterGame();
         } else {
-          const song = entry.song;
-          // Reuse already-loaded buffer if available
-          if(song._audioBuffer && window.NeonRhythm) {
-            window.NeonRhythm.loadAudio(song._audioBuffer);
-          }
-          if(window.NeonRhythm) {
-            window.NeonRhythm.setActiveSongId(song.id);
-            window.NeonRhythm.enterGame();
-          }
+          // No audio — chart-only play
+          closeSongSelect();
+          window.NeonRhythm.setActiveSongId(song.id);
+          window.NeonRhythm.enterGame();
         }
       }
 
-      // Keyboard nav inside song select
+      // ── Keyboard navigation inside song select ──
       document.addEventListener('keydown', e=>{
         const ss = document.getElementById('hud-songselect');
         if(ss.style.display !== 'flex') return;
+
         if(e.code === 'ArrowUp' || e.code === 'KeyW') {
           e.preventDefault();
-          focusSsCard(Math.max(0, ssFocused - 1));
-          ssCards[ssFocused]?.el.scrollIntoView({ block:'nearest' });
+          const next = Math.max(0, ssFocused - 1);
+          focusSsCard(next);
+          ssCards[next]?.el.scrollIntoView({ block: 'nearest' });
         }
         if(e.code === 'ArrowDown' || e.code === 'KeyS') {
           e.preventDefault();
-          focusSsCard(Math.min(ssCards.length - 1, ssFocused + 1));
-          ssCards[ssFocused]?.el.scrollIntoView({ block:'nearest' });
+          const next = Math.min(ssCards.length - 1, ssFocused + 1);
+          focusSsCard(next);
+          ssCards[next]?.el.scrollIntoView({ block: 'nearest' });
         }
-        if(e.code === 'Enter') { songSelectPlay(); }
+        if(e.code === 'Enter') {
+          songSelectPlay();
+        }
         if(e.code === 'Escape') {
           stopPreview();
           closeSongSelect();
-          // Return to explore state
           if(window.NeonRhythm) window.NeonRhythm.exitToExplore();
         }
       });
 
-      // Expose openSongSelect so asg5.js can call it
-      window.openSongSelect = openSongSelect;
+      // ── Public API consumed by asg5.js ──
+      // ssSetManifest is called by asg5.js right before openSongSelect.
+      // If the screen is already open (e.g. manifest arrived late), rebuild cards.
+      window.openSongSelect  = openSongSelect;
       window.closeSongSelect = closeSongSelect;
-      window.ssGetManifest   = ()=> ssManifest;
-      window.ssSetManifest   = (m)=> { ssManifest = m; };
+      window.ssSetManifest   = function(m) {
+        ssManifest = m || [];
+        // If the screen is already open and was showing a loading spinner,
+        // rebuild cards now that we have real data.
+        if(ssIsOpen) buildSongSelectCards();
+      };
+      window.ssGetManifest = ()=> ssManifest;
     </script>
 
     <script type="module" src="asg5.js"></script>

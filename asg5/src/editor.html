@@ -197,6 +197,8 @@
     .action-btn.danger:hover { background:rgba(255,68,68,0.1); }
     .action-btn.green  { color:var(--green); border-color:rgba(0,255,136,0.4); }
     .action-btn.green:hover { background:rgba(0,255,136,0.1); }
+    .action-btn.pink   { color:var(--pink); border-color:rgba(255,0,170,0.4); }
+    .action-btn.pink:hover { background:rgba(255,0,170,0.1); }
 
     #play-btn { font-size:1.2em; font-weight:bold; padding:10px; }
 
@@ -258,8 +260,6 @@
     .tl-legend span { display:flex; align-items:center; gap:4px; }
     .tl-legend .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
     .tl-legend .bar { width:18px; height:8px; border-radius:2px; display:inline-block; opacity:0.7; }
-
-    /* Drag-to-extend instructions */
     .tl-tip {
       font-size: 0.65em; color: #334; text-align: right; margin-left: auto;
     }
@@ -298,7 +298,56 @@
     }
     .note-item .ni-del:hover { opacity:1; }
 
-    /* ── Export ── */
+    /* ── Import / Export ── */
+    .import-area {
+      background: rgba(0,0,30,0.7);
+      border: 1px solid rgba(255,0,170,0.2);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .import-area h3 {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7em; letter-spacing:2px; color:var(--pink); text-transform:uppercase;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255,0,170,0.1);
+    }
+    .import-row {
+      display: flex; gap: 8px; align-items: stretch;
+    }
+    #import-file-label {
+      padding: 7px 14px; border-radius: 7px;
+      border: 1px solid rgba(255,0,170,0.35); background: rgba(30,0,20,0.8);
+      color: var(--pink); cursor: pointer;
+      font-family:'Share Tech Mono',monospace; font-size:0.85em;
+      white-space: nowrap; display: flex; align-items: center; gap: 6px;
+      transition: all .15s;
+    }
+    #import-file-label:hover { background: rgba(255,0,170,0.1); box-shadow: 0 0 10px rgba(255,0,170,0.2); }
+    #import-file { display:none; }
+    #import-textarea {
+      flex: 1;
+      background: rgba(0,0,15,0.9);
+      border: 1px solid rgba(255,0,170,0.2);
+      border-radius: 6px; color: #cde;
+      font-family: 'Share Tech Mono', monospace; font-size: 0.75em;
+      padding: 8px; resize: vertical; min-height: 60px;
+    }
+    #import-textarea:focus { outline: none; border-color: var(--pink); }
+    #import-textarea::placeholder { color: #334; }
+    #import-btn {
+      padding: 7px 18px; border-radius: 7px;
+      border: 1px solid rgba(255,0,170,0.4); background: rgba(30,0,20,0.8);
+      color: var(--pink); cursor: pointer;
+      font-family:'Share Tech Mono',monospace; font-size:0.85em;
+      white-space: nowrap; align-self: flex-end;
+      transition: all .15s;
+    }
+    #import-btn:hover { background: rgba(255,0,170,0.12); box-shadow: 0 0 10px rgba(255,0,170,0.2); }
+    #import-status {
+      font-size: 0.68em; color: #445; min-height: 1em;
+    }
+
     .export-area {
       background: rgba(0,0,30,0.7);
       border: 1px solid rgba(0,255,255,0.15);
@@ -455,15 +504,28 @@
       <div id="note-list"></div>
     </div>
 
+    <!-- Import -->
+    <div class="import-area">
+      <h3>📥 Import Chart</h3>
+      <div class="import-row">
+        <!-- File picker -->
+        <label id="import-file-label" for="import-file">📂 Open .json</label>
+        <input type="file" id="import-file" accept=".json,application/json">
+        <!-- Paste area -->
+        <textarea id="import-textarea" placeholder="…or paste chart JSON here"></textarea>
+        <button id="import-btn" onclick="importFromTextarea()">Load</button>
+      </div>
+      <div id="import-status"></div>
+    </div>
+
     <!-- Export -->
     <div class="export-area">
-      <h3>Export / Import</h3>
+      <h3>📤 Export Chart</h3>
       <textarea id="export-output" readonly placeholder="Click 'Generate JSON' to export your chart…"></textarea>
       <div class="export-btns">
         <button class="action-btn green" onclick="exportChart()" style="flex:1;">Generate JSON</button>
         <button class="action-btn"       onclick="copyChart()"   style="flex:1;">📋 Copy</button>
         <button class="action-btn"       onclick="downloadChart()" style="flex:1;">💾 Download .json</button>
-        <button class="action-btn danger" onclick="importChart()" style="flex:1;">📥 Import JSON</button>
       </div>
     </div>
 
@@ -496,9 +558,9 @@ let holdMode     = false;
 let holdDuration = 0.5;
 
 // Drag-to-resize state
-let dragNote  = null;   // index of note being drag-extended
-let dragStart = null;   // clientX at drag start
-let dragOrigD = 0;      // original duration at drag start
+let dragNote  = null;
+let dragStart = null;
+let dragOrigD = 0;
 
 // ═══════════════════════════════════════════
 //  Hold toggle
@@ -673,7 +735,6 @@ function drawTimeline() {
       const barW=dur*zoom;
       const x1=x+NOTE_R, x2=x+NOTE_R+barW;
       if(x2>0 && x1<W) {
-        // Background bar
         ctx.save();
         ctx.fillStyle=col+'55';
         ctx.strokeStyle=col+'99';
@@ -682,8 +743,6 @@ function drawTimeline() {
         const bx=Math.max(x1,0), bx2=Math.min(x2,W);
         ctx.fillRect(bx, y-bh/2, bx2-bx, bh);
         ctx.strokeRect(bx, y-bh/2, bx2-bx, bh);
-
-        // Drag handle at right edge
         if(x2<W && x2>0) {
           ctx.fillStyle=col;
           ctx.beginPath();
@@ -694,7 +753,7 @@ function drawTimeline() {
       }
     }
 
-    // Note head (circle + glow)
+    // Note head
     if(x<-NOTE_R||x>W+NOTE_R) return;
     ctx.save();
     ctx.shadowColor=col; ctx.shadowBlur=12;
@@ -705,7 +764,6 @@ function drawTimeline() {
     ctx.fillStyle='#000'; ctx.font='bold 9px Orbitron,monospace';
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(LANE_LABELS[n.lane], x, y);
-    // Hold indicator dot
     if(dur>0) {
       ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y-NOTE_R-3,2,0,Math.PI*2); ctx.fill();
     }
@@ -727,31 +785,27 @@ function drawTimeline() {
 // ═══════════════════════════════════════════
 const tlCvs=document.getElementById('timeline-canvas');
 
-// Hit-test helper: find note near (mx,my), also returns dragHandleHit
 function hitTestNote(mx, my) {
   let headIdx=-1, headDist=Infinity;
-  let handleIdx=-1, handleDist=Infinity;
+  let handleIdx=-1;
 
   notes.forEach((n,i)=>{
     const x=timeToX(n.time);
     const y=LANE_Y[n.lane];
     const dur=n.duration||0;
 
-    // Head circle
     const d=Math.hypot(mx-x, my-y);
     if(d<NOTE_R+4 && d<headDist) { headDist=d; headIdx=i; }
 
-    // Drag handle (right edge of hold bar)
     if(dur>0) {
       const hx=x+NOTE_R+dur*zoom;
       const bh=14;
-      if(Math.abs(mx-hx)<8 && Math.abs(my-y)<bh) { handleIdx=i; handleDist=Math.abs(mx-hx); }
+      if(Math.abs(mx-hx)<8 && Math.abs(my-y)<bh) { handleIdx=i; }
     }
   });
   return { headIdx, handleIdx };
 }
 
-// Pointer events for drag-to-resize
 tlCvs.addEventListener('mousedown', e=>{
   const r=tlCvs.getBoundingClientRect();
   const mx=e.clientX-r.left, my=e.clientY-r.top;
@@ -776,7 +830,6 @@ window.addEventListener('mouseup', ()=>{
   if(dragNote!==null) { dragNote=null; dragStart=null; dragOrigD=0; }
 });
 
-// Cursor change on hover over handle
 tlCvs.addEventListener('mousemove', e=>{
   if(dragNote!==null) return;
   const r=tlCvs.getBoundingClientRect();
@@ -786,11 +839,11 @@ tlCvs.addEventListener('mousemove', e=>{
 });
 
 tlCvs.addEventListener('click', e=>{
-  if(dragStart!==null && Math.abs(e.clientX-dragStart)>4) return; // was a drag
+  if(dragStart!==null && Math.abs(e.clientX-dragStart)>4) return;
   const r=tlCvs.getBoundingClientRect();
   const mx=e.clientX-r.left, my=e.clientY-r.top;
   const {handleIdx}=hitTestNote(mx,my);
-  if(handleIdx>=0) return; // don't seek when clicking handle
+  if(handleIdx>=0) return;
   seek(xToTime(mx));
 });
 
@@ -799,7 +852,6 @@ tlCvs.addEventListener('contextmenu', e=>{
   const r=tlCvs.getBoundingClientRect();
   const mx=e.clientX-r.left, my=e.clientY-r.top;
   const t=xToTime(mx);
-  // Find nearest note head
   let best=null; let bestD=14/zoom;
   notes.forEach((n,i)=>{ const d=Math.abs(n.time-t); if(d<bestD){ bestD=d; best=i; } });
   if(best!==null){ notes.splice(best,1); refreshNoteList(); drawTimeline(); }
@@ -853,7 +905,7 @@ document.addEventListener('keydown', e=>{
   if(e.code==='KeyS'){ selectLane(1); stampNote(1); }
   if(e.code==='KeyW'){ e.preventDefault(); selectLane(2); stampNote(2); }
   if(e.code==='KeyD'){ selectLane(3); stampNote(3); }
-  if(e.code==='KeyH'){ toggleHold(); }    // H = toggle hold
+  if(e.code==='KeyH'){ toggleHold(); }
   if(e.code==='ArrowLeft')  seek(playhead-60/bpm);
   if(e.code==='ArrowRight') seek(playhead+60/bpm);
   if(e.code==='Home') jumpToStart();
@@ -898,7 +950,58 @@ function refreshNoteList() {
 function deleteNote(i){ notes.splice(i,1); refreshNoteList(); drawTimeline(); }
 
 // ═══════════════════════════════════════════
-//  Export / Import
+//  Import
+// ═══════════════════════════════════════════
+
+// Core apply function — shared by file picker and paste
+function applyChartData(raw, sourceName) {
+  const status = document.getElementById('import-status');
+  try {
+    const c = JSON.parse(raw);
+    if(!c.notes || !Array.isArray(c.notes)) throw new Error('Missing "notes" array');
+    notes = c.notes.map(n => ({ time: n.time, lane: n.lane, duration: n.duration || 0 }));
+    if(c.bpm)    { bpm    = c.bpm;    document.getElementById('bpm-input').value    = bpm; }
+    if(c.offset) { offset = c.offset; document.getElementById('offset-input').value = offset; }
+    if(c.title)  { document.getElementById('song-title').value = c.title; }
+    bpm    = parseFloat(document.getElementById('bpm-input').value)    || 128;
+    offset = parseFloat(document.getElementById('offset-input').value) || 0;
+    refreshNoteList();
+    drawTimeline();
+    const holds = notes.filter(n => n.duration > 0).length;
+    status.textContent = `✓ Loaded ${notes.length} notes (${holds} holds) from ${sourceName}`;
+    status.style.color = '#00ff88';
+    // Clear the paste textarea after a successful load
+    document.getElementById('import-textarea').value = '';
+  } catch(e) {
+    status.textContent = '✗ ' + e.message;
+    status.style.color = '#ff4444';
+  }
+}
+
+// File picker → read file → applyChartData
+document.getElementById('import-file').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => applyChartData(ev.target.result, file.name);
+  reader.readAsText(file);
+  // Reset the input so the same file can be re-imported if needed
+  e.target.value = '';
+});
+
+// Paste textarea → "Load" button
+function importFromTextarea() {
+  const raw = document.getElementById('import-textarea').value.trim();
+  if(!raw) {
+    document.getElementById('import-status').textContent = 'Paste JSON above or use the file picker.';
+    document.getElementById('import-status').style.color = '#667';
+    return;
+  }
+  applyChartData(raw, 'clipboard');
+}
+
+// ═══════════════════════════════════════════
+//  Export
 // ═══════════════════════════════════════════
 function exportChart() {
   const chart={
@@ -926,20 +1029,6 @@ function downloadChart() {
   a.href=URL.createObjectURL(blob);
   a.download=(document.getElementById('song-title').value||'chart').replace(/\s+/g,'_')+'.json';
   a.click();
-}
-function importChart() {
-  const raw=document.getElementById('export-output').value.trim();
-  try {
-    const c=JSON.parse(raw);
-    notes=(c.notes||[]).map(n=>({time:n.time, lane:n.lane, duration:n.duration||0}));
-    document.getElementById('bpm-input').value=c.bpm||128;
-    document.getElementById('offset-input').value=c.offset||0;
-    document.getElementById('song-title').value=c.title||'';
-    bpm=c.bpm||128; offset=c.offset||0;
-    refreshNoteList(); drawTimeline();
-    const holds=notes.filter(n=>n.duration>0).length;
-    alert(`Chart imported! ${notes.length} notes (${holds} holds).`);
-  } catch(e){ alert('Invalid JSON: '+e.message); }
 }
 
 // ═══════════════════════════════════════════
