@@ -493,8 +493,10 @@ export function buildCity(scene, CFG) {
 
   for(let i=-5;i<=5;i++){
     group.add(_makeStreetlight(i*12,0,-15,CFG));
-    group.add(_makeStreetlight(i*12,0, 15,CFG));
-  }
+    if (i !== 0) {
+      group.add(_makeStreetlight(i*12,0, 15,CFG));
+      }
+    }
   return group;
 }
 
