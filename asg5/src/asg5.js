@@ -19,12 +19,18 @@ const LANE_KEYS    = ['a','s','w','d'];          // left, down, up, right
 const LANE_COLORS  = [0x00ffff, 0xff00aa, 0x00ff88, 0xffcc00];
 const LANE_LABELS  = ['◄','▼','▲','►'];
 const LANE_X       = [-1.5, -0.5, 0.5, 1.5];    // X positions in game lane
+const LANE_ROT_Z   = [Math.PI/2, Math.PI, 0, -Math.PI/2]; // L D U R (shape default +Y)
 const HIGHWAY_LEN  = 40;                          // how far arrows spawn from camera
+const TARGET_Z     = -8;                          // world z of target zone / receptors
 const HIT_Z        = 0;                           // target zone z (camera-relative)
 const HIT_WINDOW   = 0.18;                        // ±seconds for a hit
 const PERFECT_WIN  = 0.07;
 const ARROW_SPEED  = 14;                          // units/sec (travel time ~2.8s)
 const TRAVEL_TIME  = HIGHWAY_LEN / ARROW_SPEED;
+const HOLD_END_BONUS = 150;                       // bonus for holding through the tail
+const HOLD_BODY_SCALE = 0.58;                   // width vs note head (single extruded beam)
+const HOLD_BODY_MIN_LEN = 0.55;                 // minimum tail length in world units
+const WRONG_PRESS_COOLDOWN = 0.1;               // debounce multi-key mash to one penalty
 const BPM_DEFAULT  = 128;
 const PROXIMITY_R  = 7;                           // metres to trigger game prompt
 
@@ -466,8 +472,6 @@ function buildTargetZones() {
   const shape = makeArrowShape();
   const extSettings = { depth:0.08, bevelEnabled:true, bevelThickness:0.02, bevelSize:0.02, bevelSegments:3 };
 
-  const rotations = [Math.PI/2, 0, Math.PI, -Math.PI/2]; // L D U R
-
   for(let i=0;i<LANE_COUNT;i++) {
     const geo = new THREE.ExtrudeGeometry(shape, extSettings);
     const mat = new THREE.MeshStandardMaterial({
@@ -479,7 +483,7 @@ function buildTargetZones() {
     });
     const mesh = new THREE.Mesh(geo, mat);
     geo.center();
-    mesh.rotation.z = rotations[i];
+    mesh.rotation.z = LANE_ROT_Z[i];
     mesh.position.set(LANE_X[i], 0.36, -8);
     scene.add(mesh);
 
@@ -507,8 +511,6 @@ const _arrowMats = [];
 function buildArrowPool() {
   const shape = makeArrowShape();
   const ext   = { depth:0.12, bevelEnabled:true, bevelThickness:0.03, bevelSize:0.03, bevelSegments:3 };
-  const rotations = [Math.PI/2, 0, Math.PI, -Math.PI/2];
-
   // Build one geo+mat per lane, shared by all pool arrows of that lane
   for(let lane=0;lane<LANE_COUNT;lane++) {
     const geo = new THREE.ExtrudeGeometry(shape, ext);
@@ -525,7 +527,7 @@ function buildArrowPool() {
   for(let i=0;i<POOL_SIZE;i++) {
     const lane = i % LANE_COUNT;
     const mesh = new THREE.Mesh(_arrowGeos[lane], _arrowMats[lane]);
-    mesh.rotation.z = rotations[lane];
+    mesh.rotation.z = LANE_ROT_Z[lane];
     mesh.visible = false;
     mesh.castShadow = true;
 
@@ -548,24 +550,121 @@ function getPooledArrow(lane) {
     }
   }
   // Fallback: any unused arrow — reassign lane visuals
-  const rotations = [Math.PI/2, 0, Math.PI, -Math.PI/2];
   for(let a of arrowPool) {
     if(!a.visible) {
       a.userData.lane = lane;
       a.material = _arrowMats[lane];
       a.userData.light.color.setHex(LANE_COLORS[lane]);
-      a.rotation.z = rotations[lane];
+      a.rotation.z = LANE_ROT_Z[lane];
       a.visible=true; return a;
     }
   }
   return null;
 }
 
+function releaseHoldBody(arrow) {
+  const body = arrow.userData.holdBody;
+  if(!body) return;
+  body.visible = false;
+  body.scale.set(1, 1, 1);
+  arrow.userData.holdBody = null;
+}
+
 function recycleArrow(arrow) {
+  releaseHoldBody(arrow);
   arrow.visible=false;
   arrow.userData.light.intensity=0;
+  arrow.userData.holdStarted=false;
   const idx=activeArrows.indexOf(arrow);
   if(idx>=0) activeArrows.splice(idx,1);
+}
+
+// ─────────────────────────────────────────────
+//  Hold body — one smooth extruded arrow beam (depth scaled to duration)
+// ─────────────────────────────────────────────
+const HOLD_BODY_POOL_SIZE = 32;
+const holdBodyPool        = [];
+const _holdBodyGeos       = [];
+const _holdBodyMats       = [];
+
+function buildHoldBodyPool() {
+  const shape = makeArrowShape();
+  // Unit-length extrude; mesh.scale.z stretches into a continuous tail
+  const ext = {
+    depth: 1,
+    bevelEnabled: true,
+    bevelThickness: 0.04,
+    bevelSize: 0.04,
+    bevelSegments: 4,
+    curveSegments: 8,
+  };
+  for(let lane=0; lane<LANE_COUNT; lane++) {
+    const geo = new THREE.ExtrudeGeometry(shape, ext);
+    geo.center();
+    _holdBodyGeos.push(geo);
+    _holdBodyMats.push(new THREE.MeshStandardMaterial({
+      color:    LANE_COLORS[lane],
+      emissive: new THREE.Color(LANE_COLORS[lane]),
+      emissiveIntensity: 0.95,
+      roughness: 0.15,
+      metalness: 0.5,
+      transparent: true,
+      opacity: 0.88,
+    }));
+  }
+  for(let i=0; i<HOLD_BODY_POOL_SIZE; i++) {
+    const lane = i % LANE_COUNT;
+    const mesh = new THREE.Mesh(_holdBodyGeos[lane], _holdBodyMats[lane]);
+    mesh.rotation.z = LANE_ROT_Z[lane];
+    mesh.visible = false;
+    mesh.castShadow = true;
+    scene.add(mesh);
+    holdBodyPool.push(mesh);
+  }
+}
+
+function getPooledHoldBody(lane) {
+  for(const b of holdBodyPool) {
+    if(!b.visible && b.userData.bodyLane === lane) {
+      b.material = _holdBodyMats[lane];
+      return b;
+    }
+  }
+  for(const b of holdBodyPool) {
+    if(!b.visible) {
+      b.userData.bodyLane = lane;
+      b.material = _holdBodyMats[lane];
+      b.rotation.z = LANE_ROT_Z[lane];
+      return b;
+    }
+  }
+  return null;
+}
+
+function updateHoldBodyVisual(arrow) {
+  if(!arrow.userData.isHold) return;
+
+  const len   = Math.max(arrow.userData.duration * ARROW_SPEED, HOLD_BODY_MIN_LEN);
+  const headZ = arrow.position.z;
+  const lane  = arrow.userData.lane;
+
+  let body = arrow.userData.holdBody;
+  if(!body) {
+    body = getPooledHoldBody(lane);
+    if(!body) return;
+    arrow.userData.holdBody = body;
+  }
+
+  body.material = _holdBodyMats[lane];
+  body.rotation.z = LANE_ROT_Z[lane];
+  body.scale.set(HOLD_BODY_SCALE, HOLD_BODY_SCALE, len);
+  // Centered unit extrude: front edge meets the head, tail extends backward (-Z)
+  body.position.set(LANE_X[lane], 0.48, headZ - len * 0.5);
+  body.visible = true;
+}
+
+function arrowZAtSongTime(st, spawnTime) {
+  return (TARGET_Z - HIGHWAY_LEN) + (st - spawnTime) * ARROW_SPEED;
 }
 
 // ─────────────────────────────────────────────
@@ -595,9 +694,10 @@ let songPauseAccum = 0;  // accumulated pause time (unused here, for extensibili
 /**
  * Returns elapsed game time in seconds since enterGame() was called.
  * Uses performance.now() so it works regardless of AudioContext state.
+ * Returns 0 only when no game has been started yet.
  */
 function songTime() {
-  if(gameState !== STATES.PLAYING) return 0;
+  if(songStartWall === 0) return 0;
   return (performance.now() - songStartWall) / 1000;
 }
 
@@ -654,7 +754,14 @@ document.addEventListener('keyup', e=>{
 canvas.addEventListener('click',()=>{
   if(gameState===STATES.EXPLORE||gameState===STATES.PROMPT) controls.lock();
 });
+
+// Only exit the game if the USER caused the unlock (pressed Escape or clicked out).
+// We use a flag so that controls.unlock() called programmatically inside enterGame()
+// doesn't also fire exitGame() — that was causing the game to immediately exit
+// every single time E was pressed, making it appear to "work only once".
+let _programmingUnlock = false;
 controls.addEventListener('unlock',()=>{
+  if(_programmingUnlock) { _programmingUnlock=false; return; }
   if(gameState===STATES.PLAYING) exitGame();
 });
 
@@ -700,7 +807,12 @@ function enterGame() {
   exploreCamPos.copy(camera.position);
   exploreCamQuat.copy(camera.quaternion);
 
+  // Unlock pointer lock so the game can use keyboard freely.
+  // Set the flag FIRST so the unlock listener knows this is programmatic
+  // and does NOT call exitGame().
+  _programmingUnlock = true;
   controls.unlock();
+
   gameState = STATES.PLAYING;
 
   // Snap camera to game position
@@ -709,6 +821,7 @@ function enterGame() {
 
   // Reset score
   score=0;combo=0;maxCombo=0;perfects=0;goods=0;misses=0;totalNotes=0;noteIndex=0;
+  lastWrongPressTime=-1;
 
   // ─── FIX: Record wall-clock start time for songTime().
   // We do this BEFORE any async audio work so the timer is accurate.
@@ -739,6 +852,7 @@ function enterGame() {
 function exitGame() {
   gameState=STATES.EXPLORE;
   randomActive=false;
+  songStartWall=0;  // reset so songTime() returns 0 between games
 
   // Stop song if playing
   if(songSource) { try{songSource.stop();}catch(e){} songSource=null; }
@@ -757,11 +871,10 @@ function exitGame() {
 
 function endGame() {
   gameState=STATES.RESULT;
+  randomActive=false;
+  songStartWall=0;
   if(songSource) { try{songSource.stop();}catch(e){} songSource=null; }
   [...activeArrows].forEach(a=>recycleArrow(a));
-  randomActive=false;
-
-  // Show result
   resultEl.style.display='flex';
   document.getElementById('res-score-big').textContent = score.toString().padStart(7,'0');
   document.getElementById('res-combo').textContent  = maxCombo;
@@ -776,22 +889,38 @@ function endGame() {
 }
 
 // ─────────────────────────────────────────────
-//  Arrow spawning
+//  Note spawning (tap + hold)
 // ─────────────────────────────────────────────
-const TARGET_Z  = -8;             // world z of target zone
 
-function spawnArrow(lane) {
+function spawnNote({ lane, time, duration = 0 }) {
   const arrow = getPooledArrow(lane);
   if(!arrow) return;
-  arrow.position.set(LANE_X[lane], 0.5, TARGET_Z - HIGHWAY_LEN);
-  const st = songTime();
-  arrow.userData.spawnTime  = st;
-  arrow.userData.targetTime = st + TRAVEL_TIME;
-  arrow.userData.hit    = false;
-  arrow.userData.missed = false;
+
+  const st         = songTime();
+  const spawnTime  = time - TRAVEL_TIME;
+  const isHold     = duration > 0;
+
+  arrow.position.set(LANE_X[lane], 0.5, arrowZAtSongTime(st, spawnTime));
+  arrow.userData.spawnTime   = spawnTime;
+  arrow.userData.targetTime  = time;
+  arrow.userData.endTime     = time + duration;
+  arrow.userData.duration    = duration;
+  arrow.userData.isHold      = isHold;
+  arrow.userData.holdStarted = false;
+  arrow.userData.holdDone    = false;
+  arrow.userData.hit         = false;
+  arrow.userData.missed      = false;
+  arrow.userData.holdBody    = null;
   arrow.userData.light.intensity = 1.2;
+
+  if(isHold) updateHoldBodyVisual(arrow);
+
   activeArrows.push(arrow);
   totalNotes++;
+}
+
+function spawnTap(lane) {
+  spawnNote({ lane, time: songTime() + TRAVEL_TIME, duration: 0 });
 }
 
 function scheduleChart() {
@@ -821,44 +950,151 @@ function scheduleChart() {
 }
 
 // ─────────────────────────────────────────────
-//  Hit detection
+//  Hit detection (tap + hold)
 // ─────────────────────────────────────────────
 const lanePressed = [false,false,false,false];
+let lastWrongPressTime = -1;
+
+/** Notes whose heads are currently in the hit window. */
+function getHittableNotes(t) {
+  return activeArrows.filter(a=>{
+    if(a.userData.missed) return false;
+    if(a.userData.isHold && a.userData.holdStarted) return false;
+    if(!a.userData.isHold && a.userData.hit) return false;
+    return Math.abs(t - a.userData.targetTime) <= HIT_WINDOW;
+  });
+}
+
+/** Correct lane pressed too early/late while a head is approaching. */
+function hasNearMissOnLane(lane, t) {
+  return activeArrows.some(a=>{
+    if(a.userData.lane!==lane || a.userData.missed) return false;
+    if(a.userData.isHold && a.userData.holdStarted) return false;
+    if(!a.userData.isHold && a.userData.hit) return false;
+    const d = Math.abs(t - a.userData.targetTime);
+    return d > HIT_WINDOW && d <= HIT_WINDOW * 1.75;
+  });
+}
+
+function punishWrongInput() {
+  const t = songTime();
+  if(t - lastWrongPressTime < WRONG_PRESS_COOLDOWN) return;
+  lastWrongPressTime = t;
+  combo = 0;
+  misses++;
+  showJudge('WRONG','#ff4444');
+  updateHUD();
+}
+
+function scoreHeadHit(delta) {
+  combo++;
+  if(combo>maxCombo) maxCombo=combo;
+  if(delta<=PERFECT_WIN) {
+    score+=300+combo*10;
+    perfects++;
+    showJudge('PERFECT!','#ffdd00');
+    return 1.5;
+  }
+  score+=100+combo*5;
+  goods++;
+  showJudge('GOOD','#00ffcc');
+  return 0.8;
+}
+
+function startHoldHead(arrow, delta) {
+  arrow.userData.holdStarted = true;
+  arrow.userData.hit         = true;
+  const flash = scoreHeadHit(delta);
+  flashTarget(arrow.userData.lane, flash);
+  updateHUD();
+}
+
+function resetTargetGlow(lane) {
+  targetLights[lane].intensity = 0;
+  targetZones[lane].material.emissiveIntensity = 0.3;
+}
+
+function completeHold(arrow) {
+  if(arrow.userData.holdDone || arrow.userData.missed) return;
+  arrow.userData.holdDone = true;
+  const lane = arrow.userData.lane;
+  combo++;
+  if(combo>maxCombo) maxCombo=combo;
+  score += HOLD_END_BONUS + combo * 5;
+  showJudge('HOLD!','#88ff00');
+  flashTarget(lane, 1.2);
+  updateHUD();
+  recycleArrow(arrow);
+}
+
+function failHold(arrow, earlyRelease) {
+  if(arrow.userData.missed) return;
+  arrow.userData.missed = true;
+  const lane = arrow.userData.lane;
+  misses++;
+  combo = 0;
+  showJudge(earlyRelease ? 'HOLD BREAK' : 'MISS', '#ff4444');
+  resetTargetGlow(lane);
+  updateHUD();
+  recycleArrow(arrow);
+}
 
 function handleHitInput(lane) {
   if(gameState!==STATES.PLAYING) return;
   const t = songTime();
-  let best=null; let bestDelta=Infinity;
+  const hittable = getHittableNotes(t);
+  const onLane   = hittable.filter(a=>a.userData.lane===lane);
 
-  for(let arrow of activeArrows) {
-    if(arrow.userData.lane!==lane || arrow.userData.hit || arrow.userData.missed) continue;
+  if(onLane.length === 0) {
+    // Wrong lane while other notes expect input, or bad timing on this lane
+    if(hittable.length > 0 || hasNearMissOnLane(lane, t)) {
+      punishWrongInput();
+    } else {
+      flashTarget(lane, 0.3);
+    }
+    return;
+  }
+
+  let best=null, bestDelta=Infinity;
+  for(const arrow of onLane) {
     const delta = Math.abs(t - arrow.userData.targetTime);
     if(delta < bestDelta) { bestDelta=delta; best=arrow; }
   }
 
-  if(!best || bestDelta > HIT_WINDOW) {
-    // Ghost press
-    flashTarget(lane, 0.3);
+  if(best.userData.isHold) {
+    startHoldHead(best, bestDelta);
     return;
   }
 
-  best.userData.hit=true;
-  recycleArrow(best);
-  combo++;
-  if(combo>maxCombo) maxCombo=combo;
-
-  if(bestDelta<=PERFECT_WIN) {
-    score+=300+combo*10;
-    perfects++;
-    showJudge('PERFECT!','#ffdd00');
-    flashTarget(lane, 1.5);
-  } else {
-    score+=100+combo*5;
-    goods++;
-    showJudge('GOOD','#00ffcc');
-    flashTarget(lane, 0.8);
-  }
+  best.userData.hit = true;
+  const flash = scoreHeadHit(bestDelta);
+  flashTarget(lane, flash);
   updateHUD();
+  recycleArrow(best);
+}
+
+function updateHoldStates(st) {
+  for(let i=activeArrows.length-1; i>=0; i--) {
+    const arrow = activeArrows[i];
+    if(!arrow.userData.isHold || arrow.userData.missed) continue;
+
+    const lane = arrow.userData.lane;
+
+    if(arrow.userData.holdStarted) {
+      if(!lanePressed[lane]) {
+        failHold(arrow, true);
+        i--;
+        continue;
+      }
+      if(st >= arrow.userData.endTime) {
+        completeHold(arrow);
+        i--;
+      } else {
+        targetLights[lane].intensity = 1.2 + Math.sin(st * 12) * 0.4;
+        targetZones[lane].material.emissiveIntensity = 1.0;
+      }
+    }
+  }
 }
 
 function flashTarget(lane, intensity) {
@@ -870,21 +1106,27 @@ function flashTarget(lane, intensity) {
   }, 150);
 }
 
+function laneFromEvent(e) {
+  const k = e.key.toLowerCase();
+  const keyLane = { a:0, s:1, w:2, d:3 };
+  if(keyLane[k] !== undefined) return keyLane[k];
+  const codeLane = { ArrowLeft:0, ArrowDown:1, ArrowUp:2, ArrowRight:3 };
+  return codeLane[e.code];
+}
+
 // Key handler for gameplay
 document.addEventListener('keydown', e=>{
   if(gameState!==STATES.PLAYING) return;
-  const k = e.key.toLowerCase();
-  const laneMap = {'a':0,'s':1,'w':2,'d':3};
-  if(laneMap[k]!==undefined && !lanePressed[laneMap[k]]) {
-    lanePressed[laneMap[k]]=true;
-    handleHitInput(laneMap[k]);
+  const lane = laneFromEvent(e);
+  if(lane !== undefined && !lanePressed[lane]) {
+    lanePressed[lane]=true;
+    handleHitInput(lane);
   }
-  if(e.code==='Escape') { endGame(); }
+  if(e.code==='Escape') { exitGame(); }
 });
 document.addEventListener('keyup', e=>{
-  const k=e.key.toLowerCase();
-  const laneMap={'a':0,'s':1,'w':2,'d':3};
-  if(laneMap[k]!==undefined) lanePressed[laneMap[k]]=false;
+  const lane = laneFromEvent(e);
+  if(lane !== undefined) lanePressed[lane]=false;
 });
 
 // ─────────────────────────────────────────────
@@ -1042,6 +1284,7 @@ buildSkybox();
 buildDanceFloor();
 buildTargetZones();
 buildArrowPool();
+buildHoldBodyPool();
 buildWorldExtras();
 loadGLBModel();
 
@@ -1060,8 +1303,7 @@ function onResize() {
 // ─────────────────────────────────────────────
 //  Main Loop
 // ─────────────────────────────────────────────
-import { Timer } from 'three/addons/misc/Timer.js';
-const clock = new Timer();
+const clock = new THREE.Clock();
 
 // Reusable Vector2 for proximity checks — avoids per-frame allocation
 const _pos2D   = new THREE.Vector2();
@@ -1069,11 +1311,10 @@ const _floor2D = new THREE.Vector2(FLOOR_POS.x, FLOOR_POS.z);
 
 function animate() {
   requestAnimationFrame(animate);
-  clock.update();
   const dt = Math.min(clock.getDelta(), 0.1);
   onResize();
 
-  const t = clock.getElapsed();
+  const t = clock.getElapsedTime();
 
   // ── Animate world ──────────────────────────
   // Floating orbs
@@ -1107,21 +1348,21 @@ function animate() {
 
   // ── FPS movement (EXPLORE / PROMPT) ────────
   if(controls.isLocked && (gameState===STATES.EXPLORE||gameState===STATES.PROMPT)) {
-    const speed=8;
-    vel.x -= vel.x*8*dt;
-    vel.z -= vel.z*8*dt;
-    vel.y -= vel.y*8*dt;
-    dir.set(
-      (moveR?1:0)-(moveL?1:0),
-      (moveU?1:0)-(moveD?1:0),
-      (moveB?1:0)-(moveF?1:0)
-    ).normalize();
-    if(moveF||moveB) vel.z -= dir.z*speed*10*dt;
-    if(moveL||moveR) vel.x -= dir.x*speed*10*dt;
-    if(moveU||moveD) vel.y += dir.y*speed*6*dt;
-    controls.moveRight(-vel.x*dt);
-    controls.moveForward(-vel.z*dt);
-    camera.position.y=Math.max(1.7, camera.position.y+vel.y*dt);
+    const speed = 8;
+    // Damping
+    vel.x -= vel.x * 8 * dt;
+    vel.z -= vel.z * 8 * dt;
+    vel.y -= vel.y * 8 * dt;
+    // Acceleration: forward is -Z in Three.js world, moveForward(+) goes in camera direction
+    if(moveF) vel.z += speed * 10 * dt;   // forward
+    if(moveB) vel.z -= speed * 10 * dt;   // backward
+    if(moveL) vel.x -= speed * 10 * dt;   // strafe left
+    if(moveR) vel.x += speed * 10 * dt;   // strafe right
+    if(moveU) vel.y += speed * 6  * dt;   // up
+    if(moveD) vel.y -= speed * 6  * dt;   // down
+    controls.moveForward(vel.z * dt);
+    controls.moveRight(vel.x * dt);
+    camera.position.y = Math.max(1.7, camera.position.y + vel.y * dt);
 
     // Proximity check — reuse vectors, no allocation
     _pos2D.set(camera.position.x, camera.position.z);
@@ -1151,7 +1392,7 @@ function animate() {
           const l=Math.floor(Math.random()*4);
           if(!lanes.includes(l)) lanes.push(l);
         }
-        lanes.forEach(l=>spawnArrow(l));
+        lanes.forEach(l=>spawnTap(l));
       }
     }
 
@@ -1161,7 +1402,11 @@ function animate() {
         const note=chart.notes[noteIndex];
         // Spawn the arrow TRAVEL_TIME seconds before its target time
         if(note.time - TRAVEL_TIME <= st) {
-          spawnArrow(note.lane);
+          spawnNote({
+            lane:     note.lane,
+            time:     note.time,
+            duration: note.duration || 0,
+          });
           noteIndex++;
         } else break;
       }
@@ -1171,18 +1416,27 @@ function animate() {
       }
     }
 
+    updateHoldStates(st);
+
     // Advance arrows
     for(let i=activeArrows.length-1;i>=0;i--) {
       const arrow=activeArrows[i];
       const elapsed=st - arrow.userData.spawnTime;
-      const progress=elapsed/TRAVEL_TIME;
-      arrow.position.z = (TARGET_Z-HIGHWAY_LEN) + progress*HIGHWAY_LEN;
-      // Subtle float
+      arrow.position.z = arrowZAtSongTime(st, arrow.userData.spawnTime);
       arrow.position.y=0.5+Math.sin(elapsed*3)*0.04;
-      // Pulse light
       arrow.userData.light.intensity=0.8+Math.sin(elapsed*10)*0.4;
 
-      // Missed?
+      if(arrow.userData.isHold) {
+        updateHoldBodyVisual(arrow);
+        if(!arrow.userData.holdStarted && !arrow.userData.missed
+            && arrow.position.z > TARGET_Z+1.5) {
+          failHold(arrow, false);
+          i--;
+        }
+        continue;
+      }
+
+      // Tap miss
       if(!arrow.userData.hit && arrow.position.z > TARGET_Z+1.5) {
         arrow.userData.missed=true;
         misses++;
@@ -1190,7 +1444,6 @@ function animate() {
         showJudge('MISS','#ff4444');
         updateHUD();
         recycleArrow(arrow);
-        // recycleArrow splices activeArrows, so decrement i
         i--;
       }
     }

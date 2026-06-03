@@ -131,7 +131,7 @@
       /* ── Canvas wrapper ── */
       #canvas-wrapper {
         position: relative;
-        margin-bottom: 10px;
+        margin-bottom: 6px;
         background: black;
         border: 1px solid rgba(0,255,255,0.12);
         box-shadow: 0 0 40px rgba(0,255,255,0.08), 0 0 80px rgba(255,0,170,0.05);
@@ -181,6 +181,35 @@
         box-shadow: 0 0 12px rgba(0,255,255,0.2);
       }
 
+      /* ── Performance Monitor ── */
+      #perf-monitor {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 6px;
+        padding: 4px 14px;
+        background: rgba(0,0,20,0.7);
+        border: 1px solid rgba(0,255,255,0.1);
+        border-radius: 6px;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.72em;
+        color: #445;
+        letter-spacing: 0.5px;
+        user-select: none;
+      }
+      #perf-monitor .perf-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      #perf-monitor .perf-label { color: #334; font-size: 0.85em; text-transform: uppercase; }
+      #perf-monitor .perf-val   { color: var(--cyan); font-weight: bold; min-width: 32px; }
+      #perf-monitor .perf-unit  { color: #334; font-size: 0.8em; }
+      /* Colour-code FPS */
+      #perf-fps.good  { color: var(--green); }
+      #perf-fps.ok    { color: var(--yellow); }
+      #perf-fps.bad   { color: #ff4444; }
+
       /* ── HUD overlay (game mode) ── */
       #hud { display: none; pointer-events: none; }
 
@@ -221,15 +250,15 @@
         transition: all 0.06s;
         text-shadow: 0 0 8px currentColor;
       }
-      .key-pad.l { color: var(--cyan);  border-color: var(--cyan);  }
-      .key-pad.d { color: var(--pink);  border-color: var(--pink);  }
-      .key-pad.u { color: var(--green); border-color: var(--green); }
-      .key-pad.r { color: var(--yellow);border-color: var(--yellow);}
+      .key-pad.l { color: var(--cyan);   border-color: var(--cyan);   }
+      .key-pad.d { color: var(--pink);   border-color: var(--pink);   }
+      .key-pad.u { color: var(--green);  border-color: var(--green);  }
+      .key-pad.r { color: var(--yellow); border-color: var(--yellow); }
       .key-pad.active { transform: scale(0.88); filter: brightness(2); }
 
-      /* Judge text */
+      /* Judge text — moved to 62% to avoid covering arrows */
       #hud-judge {
-        position: absolute; top: 38%; left: 50%;
+        position: absolute; top: 62%; left: 50%;
         transform: translateX(-50%) scale(1);
         font-family: 'Orbitron', monospace;
         font-size: 1.8em; font-weight: 900;
@@ -268,38 +297,25 @@
       }
       .prompt-box .prompt-key {
         font-family: 'Orbitron', monospace;
-        font-size: 1.5em;
-        font-weight: 900;
+        font-size: 1.5em; font-weight: 900;
         color: var(--cyan);
         text-shadow: 0 0 12px var(--cyan);
         letter-spacing: 2px;
       }
       .prompt-box .prompt-sub {
-        font-size: 0.75em;
-        color: #8ab;
-        margin-top: 4px;
-        letter-spacing: 1px;
+        font-size: 0.75em; color: #8ab; margin-top: 4px; letter-spacing: 1px;
       }
       @keyframes promptPulse {
         0%,100% { box-shadow: 0 0 20px rgba(0,255,255,0.2); }
         50%      { box-shadow: 0 0 40px rgba(0,255,255,0.5); }
       }
-
-      /* Mode selector in prompt */
-      .mode-row {
-        display: flex; gap: 8px;
-      }
+      .mode-row { display: flex; gap: 8px; }
       .mode-btn {
-        padding: 5px 14px;
-        border-radius: 6px;
+        padding: 5px 14px; border-radius: 6px;
         border: 1px solid rgba(0,255,255,0.3);
-        background: rgba(0,0,40,0.8);
-        color: #8ab;
-        cursor: pointer;
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 0.8em;
-        pointer-events: all;
-        transition: all .15s;
+        background: rgba(0,0,40,0.8); color: #8ab;
+        cursor: pointer; font-family: 'Share Tech Mono', monospace;
+        font-size: 0.8em; pointer-events: all; transition: all .15s;
       }
       .mode-btn:hover, .mode-btn.active { color:var(--cyan); border-color:var(--cyan); background:rgba(0,255,255,0.1); }
 
@@ -308,61 +324,39 @@
         display: none;
         position: absolute; inset: 0;
         background: rgba(2,0,14,0.92);
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        pointer-events: all;
+        flex-direction: column; align-items: center; justify-content: center;
+        gap: 10px; pointer-events: all;
       }
       #hud-result h2 {
         font-family: 'Orbitron', monospace;
-        font-size: 2em; font-weight: 900;
-        letter-spacing: 6px;
+        font-size: 2em; font-weight: 900; letter-spacing: 6px;
         background: linear-gradient(90deg,var(--cyan),var(--pink));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin-bottom: 6px;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text; margin-bottom: 6px;
       }
       #res-grade {
         font-family: 'Orbitron', monospace;
         font-size: 5em; font-weight: 900;
-        color: var(--yellow);
-        text-shadow: 0 0 30px var(--yellow);
-        line-height: 1;
-        margin: 4px 0;
+        color: var(--yellow); text-shadow: 0 0 30px var(--yellow);
+        line-height: 1; margin: 4px 0;
       }
-      .result-row {
-        display: flex; gap: 30px;
-        font-size: 0.85em;
-        color: #8ab;
-      }
+      .result-row { display: flex; gap: 30px; font-size: 0.85em; color: #8ab; }
       .result-stat { display: flex; flex-direction:column; align-items:center; gap:3px; }
       .result-stat .val {
-        font-family: 'Orbitron', monospace;
-        font-size: 1.4em; font-weight: 700;
-        color: var(--cyan);
+        font-family: 'Orbitron', monospace; font-size: 1.4em; font-weight: 700; color: var(--cyan);
       }
       .result-stat .lbl { font-size: 0.7em; letter-spacing: 1px; color: #556; }
       #res-score-big {
-        font-family: 'Orbitron', monospace;
-        font-size: 2em; font-weight: 900;
-        color: white;
-        letter-spacing: 3px;
+        font-family: 'Orbitron', monospace; font-size: 2em; font-weight: 900;
+        color: white; letter-spacing: 3px;
       }
       .result-btns { display: flex; gap:12px; margin-top:10px; }
       .result-btn {
-        padding: 9px 24px;
-        border-radius: 8px;
+        padding: 9px 24px; border-radius: 8px;
         border: 1px solid rgba(0,255,255,0.4);
-        background: rgba(0,0,40,0.9);
-        color: var(--cyan);
-        cursor: pointer;
-        font-family: 'Orbitron', monospace;
-        font-size: 0.85em;
-        font-weight: 700;
-        letter-spacing: 1px;
-        transition: all .15s;
+        background: rgba(0,0,40,0.9); color: var(--cyan);
+        cursor: pointer; font-family: 'Orbitron', monospace;
+        font-size: 0.85em; font-weight: 700; letter-spacing: 1px; transition: all .15s;
       }
       .result-btn:hover { background: rgba(0,255,255,0.12); box-shadow: 0 0 12px rgba(0,255,255,0.3); }
 
@@ -370,44 +364,30 @@
       #chart-panel {
         background: rgba(0,0,30,0.7);
         border: 1px solid rgba(0,255,255,0.15);
-        border-radius: 8px;
-        padding: 8px 14px;
-        display: flex; flex-direction:column; gap:6px;
-        min-width: 220px;
+        border-radius: 8px; padding: 8px 14px;
+        display: flex; flex-direction:column; gap:6px; min-width: 220px;
       }
       #chart-panel label { font-family:'Orbitron',monospace; font-size:0.62em; color:var(--cyan); text-transform:uppercase; letter-spacing:1px; }
       #chart-input {
-        background: rgba(0,0,20,0.8);
-        border: 1px solid rgba(0,255,255,0.2);
-        border-radius:5px; color:#8ab;
-        font-family:'Share Tech Mono',monospace; font-size:0.75em;
-        padding: 4px 8px; width:100%; resize:none;
+        background: rgba(0,0,20,0.8); border: 1px solid rgba(0,255,255,0.2);
+        border-radius:5px; color:#8ab; font-family:'Share Tech Mono',monospace;
+        font-size:0.75em; padding: 4px 8px; width:100%; resize:none;
       }
       #chart-input:focus { outline:none; border-color:var(--cyan); }
       #load-chart-btn {
-        padding: 4px 10px;
-        border-radius: 5px;
-        border: 1px solid rgba(0,255,255,0.3);
-        background: rgba(0,0,40,0.8);
-        color: var(--cyan);
-        cursor: pointer;
-        font-family:'Share Tech Mono',monospace; font-size:0.8em;
-        transition: all .15s;
+        padding: 4px 10px; border-radius: 5px;
+        border: 1px solid rgba(0,255,255,0.3); background: rgba(0,0,40,0.8);
+        color: var(--cyan); cursor: pointer; font-family:'Share Tech Mono',monospace;
+        font-size:0.8em; transition: all .15s;
       }
       #load-chart-btn:hover { background: rgba(0,255,255,0.1); }
       #chart-status { font-size:0.68em; color:#556; }
 
       /* ── Audio upload ── */
       #audio-upload-label {
-        padding: 4px 10px;
-        border-radius: 5px;
-        border: 1px solid rgba(0,255,255,0.2);
-        background: rgba(0,0,40,0.8);
-        color: #8ab;
-        cursor: pointer;
-        font-size: 0.78em;
-        transition: all .15s;
-        text-align: center;
+        padding: 4px 10px; border-radius: 5px;
+        border: 1px solid rgba(0,255,255,0.2); background: rgba(0,0,40,0.8);
+        color: #8ab; cursor: pointer; font-size: 0.78em; transition: all .15s; text-align: center;
       }
       #audio-upload-label:hover { color:var(--cyan); border-color:var(--cyan); }
       #audio-file { display:none; }
@@ -416,8 +396,18 @@
       #canvas-wrapper:fullscreen,
       #canvas-wrapper:-webkit-full-screen {
         display:flex; align-items:center; justify-content:center;
-        background:black;
-        width:100vw !important; height:100vh !important; margin:0;
+        background:black; width:100vw !important; height:100vh !important; margin:0;
+      }
+
+      /* bottom bar layout */
+      .bottom-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        max-width: 960px;
+        margin-top: 4px;
+        gap: 10px;
       }
     </style>
 
@@ -501,6 +491,7 @@
           <div id="hud-combo"></div>
         </div>
         <div id="hud-esc">[ ESC = exit ]</div>
+        <!-- judge at 62% — below arrows, above key pads -->
         <div id="hud-judge">PERFECT!</div>
         <div id="hud-keys">
           <div class="key-pad l" id="key-l">◄</div>
@@ -540,9 +531,25 @@
       </div>
     </div>
 
-    <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ FULLSCREEN</button>
+    <!-- ── Bottom bar: fullscreen + perf monitor ── -->
+    <div class="bottom-bar">
+      <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ FULLSCREEN</button>
 
-    <!-- ── Resize + Fullscreen scripts ── -->
+      <!-- Performance monitor -->
+      <div id="perf-monitor">
+        <div class="perf-item">
+          <span class="perf-label">FPS</span>
+          <span class="perf-val" id="perf-fps">—</span>
+        </div>
+        <div class="perf-item">
+          <span class="perf-label">Frame</span>
+          <span class="perf-val" id="perf-ms">—</span>
+          <span class="perf-unit">ms</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Resize + UI scripts ── -->
     <script>
       const ASPECT = 16/9;
 
@@ -577,6 +584,15 @@
       window.addEventListener('resize', resizeCanvas);
       window.addEventListener('load',   resizeCanvas);
 
+      // ── FPS colour-coding ───────────────────
+      const _fpsEl = document.getElementById('perf-fps');
+      const _msEl  = document.getElementById('perf-ms');
+      const _fpsObserver = new MutationObserver(()=>{
+        const fps = parseInt(_fpsEl.textContent);
+        _fpsEl.className = 'perf-val' + (fps>=50?' good':fps>=30?' ok':' bad');
+      });
+      _fpsObserver.observe(_fpsEl, {childList:true, characterData:true, subtree:true});
+
       // ── Panel / mode logic ──────────────────
       let currentMode = 'random';
 
@@ -603,7 +619,8 @@
           const c = JSON.parse(raw);
           if(!c.notes || !Array.isArray(c.notes)) throw new Error('Missing notes array');
           if(window.NeonRhythm) window.NeonRhythm.loadChart(c);
-          status.textContent = `✓ ${c.notes.length} notes loaded (${c.bpm||'?'} BPM)`;
+          const holds = c.notes.filter(n=>(n.duration||0)>0).length;
+          status.textContent = `✓ ${c.notes.length} notes (${holds} holds, ${c.bpm||'?'} BPM)`;
           status.style.color = '#00ff88';
         } catch(e) {
           status.textContent = '✗ Invalid JSON: ' + e.message;
@@ -634,12 +651,13 @@
 
       // ── Key pad visual feedback ─────────────
       const padMap = { a:'key-l', s:'key-d', w:'key-u', d:'key-r' };
+      const padCodeMap = { ArrowLeft:'key-l', ArrowDown:'key-d', ArrowUp:'key-u', ArrowRight:'key-r' };
       document.addEventListener('keydown', e=>{
-        const id = padMap[e.key.toLowerCase()];
+        const id = padMap[e.key.toLowerCase()] || padCodeMap[e.code];
         if(id) document.getElementById(id)?.classList.add('active');
       });
       document.addEventListener('keyup', e=>{
-        const id = padMap[e.key.toLowerCase()];
+        const id = padMap[e.key.toLowerCase()] || padCodeMap[e.code];
         if(id) document.getElementById(id)?.classList.remove('active');
       });
     </script>
