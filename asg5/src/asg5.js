@@ -95,6 +95,8 @@ let _programmingUnlock = false;
 const STATES = { EXPLORE:'explore', PROMPT:'prompt', SONGSELECT:'songselect', PLAYING:'playing', RESULT:'result' };
 let gameState = STATES.EXPLORE;
 
+let masterGain = null;
+
 let activeSongId = 'random';
 let _endGameTimer = null;
 
@@ -200,6 +202,13 @@ function enterGame() {
   resultEl.style.display= 'none';
 
   if (!rhythm.audioCtx) rhythm.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if (!masterGain && rhythm.audioCtx) {
+    masterGain = rhythm.audioCtx.createGain();
+    masterGain.gain.value = 0.8;
+    masterGain.connect(rhythm.audioCtx.destination);
+  }
+  rhythm.audioDestination = masterGain;
+  
 
   if (gameMode === 'chart' && rhythm.chart) {
     rhythm.startChart(rhythm.chart, songBuffer);
@@ -453,6 +462,12 @@ async function loadSong(chartUrl, audioUrl) {
     const audioRes = await fetch(audioUrl);
     if (!audioRes.ok) throw new Error(`Audio not found (${audioRes.status})`);
     if (!rhythm.audioCtx) rhythm.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if (!masterGain && rhythm.audioCtx) {
+      masterGain = rhythm.audioCtx.createGain();
+      masterGain.gain.value = 0.8;
+      masterGain.connect(rhythm.audioCtx.destination);
+    }
+    rhythm.audioDestination = masterGain;
     const arr = await audioRes.arrayBuffer();
     songBuffer = await rhythm.audioCtx.decodeAudioData(arr.slice(0));
   }
@@ -500,6 +515,9 @@ window.NeonRhythm = {
   setMode(mode) {
     gameMode = mode;
     if (mode === 'random') rhythm.chart = null;
+  },
+  setVolume(v) {
+    if (masterGain) masterGain.gain.value = Math.max(0, Math.min(1, v));
   },
   setBPM(val) {
     rhythm.bpm = val; rhythm.beatInterval = 60/val;

@@ -17,6 +17,7 @@ const HOLD_END_BONUS    = 150;
 const HOLD_BODY_SCALE   = 0.58;
 const HOLD_BODY_MIN_LEN = 0.55;
 const WRONG_PRESS_CD    = 0.1;
+const GHOST_TRAVEL      = 6;    // units past target before recycling missed notes
 
 let arrowSpeed = 14;
 let travelTime = HIGHWAY_LEN / arrowSpeed;
@@ -62,6 +63,13 @@ function buildPools(scene) {
       roughness:.15,metalness:.5,transparent:true,opacity:.88}));
   }
 
+  // Shared grayscale material for missed notes
+  const _missedMat = new THREE.MeshStandardMaterial({
+    color: 0x444444, emissive: new THREE.Color(0x222222),
+    emissiveIntensity: 0.3, roughness: 0.6, metalness: 0.3,
+    transparent: true, opacity: 0.5,
+  });
+
   for(let i=0;i<POOL_SIZE;i++){
     const lane=i%LANE_COUNT;
     const m=new THREE.Mesh(_arrowGeos[lane],_arrowMats[lane]);
@@ -75,7 +83,7 @@ function buildPools(scene) {
     scene.add(m); holdBodyPool.push(m);
   }
 
-  return {arrowPool, holdBodyPool, _arrowMats, _holdBodyMats};
+  return {arrowPool, holdBodyPool, _arrowMats, _holdBodyMats, _missedMat};
 }
 
 // ── Target zones ─────────────────────────────────────────────────────────────
@@ -145,9 +153,10 @@ function releaseHoldBody(arrow) {
 export class RhythmGame {
   constructor(scene) {
     this.scene=scene;
-    const {arrowPool,holdBodyPool,_arrowMats,_holdBodyMats}=buildPools(scene);
+    const {arrowPool,holdBodyPool,_arrowMats,_holdBodyMats,_missedMat}=buildPools(scene);
     this._arrowPool=arrowPool; this._holdBodyPool=holdBodyPool;
     this._arrowMats=_arrowMats; this._holdBodyMats=_holdBodyMats;
+    this._missedMat=_missedMat;
     const {targetZones,targetLights}=buildTargetZones(scene);
     this.targetZones=targetZones; this.targetLights=targetLights;
 
@@ -162,7 +171,7 @@ export class RhythmGame {
     /** @type {()=>void} */
     this.onEnd=null;
 
-    this.audioCtx=null; this.songBuffer=null; this.songSource=null;
+    this.audioCtx=null; this.audioDestination=null; this.songBuffer=null; this.songSource=null;
     this.songAudioStartCtx=0; this.useAudioClock=false; this.songStartWall=0;
     this.audioHitLatency=0.05;
 
@@ -214,7 +223,8 @@ export class RhythmGame {
     const go=()=>{
       this.songSource=this.audioCtx.createBufferSource();
       this.songSource.buffer=buf;
-      this.songSource.connect(this.audioCtx.destination);
+      const dest = this.audioDestination || this.audioCtx.destination;
+      this.songSource.connect(dest);
       this.songAudioStartCtx=this.audioCtx.currentTime;
       this.useAudioClock=true;
       this.songSource.start(0,0);
@@ -272,20 +282,40 @@ export class RhythmGame {
 
     this._updateHoldStates(st);
 
+    // How far past the target line before a note is considered missed
+    const missThreshold = TARGET_Z + HIT_WINDOW * arrowSpeed + 0.05;
+
     for(let i=this.activeArrows.length-1;i>=0;i--){
       const arrow=this.activeArrows[i];
       const elapsed=st-arrow.userData.spawnTime;
       arrow.position.z=arrowZAt(st,arrow.userData.spawnTime);
       arrow.position.y=.84+Math.sin(elapsed*3)*.04;
+
       if(arrow.userData.isHold){
-        updateHoldBodyVisual(arrow,this._holdBodyPool,this._holdBodyMats);
-        if(!arrow.userData.holdStarted && !arrow.userData.missed && arrow.position.z>TARGET_Z+1.5)
-          {this._failHold(arrow,false);i--;}
+        if(!arrow.userData.missed){
+          updateHoldBodyVisual(arrow,this._holdBodyPool,this._holdBodyMats);
+        }
+        // Miss trigger — hold was never started
+        if(!arrow.userData.holdStarted && !arrow.userData.missed && arrow.position.z>missThreshold){
+          this._failHold(arrow,false);
+        }
+        // Ghost drift then recycle
+        if(arrow.userData.missed && arrow.position.z>TARGET_Z+GHOST_TRAVEL){
+          this._recycle(arrow); i--;
+        }
         continue;
       }
-      if(!arrow.userData.hit && arrow.position.z>TARGET_Z+1.5){
+
+      // Tap note — mark missed once past the late window
+      if(!arrow.userData.hit && !arrow.userData.missed && arrow.position.z>missThreshold){
         arrow.userData.missed=true; this.misses++; this.combo=0;
-        this._judge('MISS','#ff4444'); this._recycle(arrow); i--;
+        this._judge('MISS','#ff4444');
+        arrow.material=this._missedMat;  // go gray
+        releaseHoldBody(arrow);
+      }
+      // Keep drifting, recycle once off-screen
+      if(arrow.userData.missed && arrow.position.z>TARGET_Z+GHOST_TRAVEL){
+        this._recycle(arrow); i--;
       }
     }
   }
@@ -307,6 +337,8 @@ export class RhythmGame {
 
   _recycle(arrow){
     releaseHoldBody(arrow);
+    // Restore lane color so the mesh can be reused from the pool
+    arrow.material=this._arrowMats[arrow.userData.lane];
     arrow.userData._bodyHeadZ=undefined; arrow.userData._bodyLen=undefined;
     arrow.visible=false; arrow.userData.holdStarted=false;
     const idx=this.activeArrows.indexOf(arrow);
@@ -393,7 +425,8 @@ export class RhythmGame {
     this._judge(earlyRelease?'HOLD BREAK':'MISS','#ff4444');
     this.targetLights[arrow.userData.lane].intensity=0;
     this.targetZones[arrow.userData.lane].material.emissiveIntensity=.3;
-    this._recycle(arrow);
+    arrow.material=this._missedMat;  // go gray instead of instant recycle
+    releaseHoldBody(arrow);          // hide the hold tail
   }
 
   _flashTarget(lane,intensity){

@@ -908,6 +908,17 @@
         <span id="audio-status" style="font-size:0.68em;color:#556;">No audio loaded</span>
       </div>
 
+      <div class="ctrl-group">
+        <label>Volume</label>
+        <div class="row">
+          <span>🔇</span>
+          <input type="range" id="vol-slider" min="0" max="100" value="50" step="1"
+            oninput="updateVolume(this.value)">
+          <span>🔊</span>
+          <span id="vol-val" style="min-width:36px;color:var(--cyan)">50%</span>
+        </div>
+      </div>
+
       <!-- Editor link -->
       <div class="ctrl-group" style="justify-content:center;align-items:center;">
         <label>Level Editor</label>
@@ -1134,6 +1145,13 @@
           status.style.color = '#ff4444';
           updatePromptSong('');
         }
+      }
+
+      function updateVolume(val) {
+        document.getElementById('vol-val').textContent = val + '%';
+        const v = Number(val) / 100;
+        if (window.NeonRhythm) window.NeonRhythm.setVolume(v);
+        if (ssPreviewGain) ssPreviewGain.gain.value = 0.55 * v;
       }
 
       // ── Panel / mode logic ──
@@ -1482,11 +1500,12 @@
         // Play a snippet: start at 30% of the track, fade in/out over 8 s
         const startAt = Math.min(buf.duration * 0.30, Math.max(0, buf.duration - 9));
 
+        const vol = (document.getElementById('vol-slider')?.value ?? 50) / 100;
+
         ssPreviewGain = ssPreviewCtx.createGain();
         ssPreviewGain.gain.setValueAtTime(0, ssPreviewCtx.currentTime);
-        ssPreviewGain.gain.linearRampToValueAtTime(0.55, ssPreviewCtx.currentTime + 1.0);
-        // Fade out starting at 6.5 s, silence at 8 s
-        ssPreviewGain.gain.setValueAtTime(0.55, ssPreviewCtx.currentTime + 6.5);
+        ssPreviewGain.gain.linearRampToValueAtTime(0.55 * vol, ssPreviewCtx.currentTime + 1.0);
+        ssPreviewGain.gain.setValueAtTime(0.55 * vol, ssPreviewCtx.currentTime + 6.5);
         ssPreviewGain.gain.linearRampToValueAtTime(0, ssPreviewCtx.currentTime + 8.0);
         ssPreviewGain.connect(ssPreviewCtx.destination);
 
