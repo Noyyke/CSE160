@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { Look } from './look.js';
 import {
   buildSkybox, buildLights, buildGround,
-  buildCity, buildDanceFloor, buildWorldExtras, loadModel,
+  buildCity, buildDanceFloor, buildWorldExtras, loadModel, buildNeonSigns,
 } from './world.js';
 import { RhythmGame, applyApproachTiming, LANE_X, LANE_ROT_Z } from './rhythm.js';
 
@@ -17,9 +17,9 @@ import { RhythmGame, applyApproachTiming, LANE_X, LANE_ROT_Z } from './rhythm.js
 const CFG = {
   mouseSensitivity:   0.0012,  // radians per pixel
   moveSpeed:          9,
-  ambientIntensity:   1.2,
-  hemiIntensity:      0.9,
-  moonIntensity:      0.7,
+  ambientIntensity:   1.5,
+  hemiIntensity:      1.1,
+  moonIntensity:      1.0,
   floorSpotIntensity: 7,
   cityPointBase:      2.5,
   streetlampIntensity:1.8,
@@ -47,10 +47,11 @@ camera.position.set(0, 1.7, 20);
 // ─────────────────────────────────────────────
 //  Build world
 // ─────────────────────────────────────────────
-buildSkybox(scene);
+const skyMesh = buildSkybox(scene);
 buildGround(scene);
 const { moon: moonLight } = buildLights(scene, CFG);
 const cityGroup = buildCity(scene, CFG);
+const neonSigns  = buildNeonSigns(scene);
 const { floorSpot, orbs, orbLights } = buildDanceFloor(scene, CFG);
 const { floatingRings, discoRef, holoCubeRef } = buildWorldExtras(scene);
 loadModel(scene);
@@ -389,6 +390,8 @@ function animate() {
 
   onResize();
   updateHoloCube(dt, _elapsed);
+  if (skyMesh?.userData.update) skyMesh.userData.update(dt);
+  neonSigns.update(dt); 
 
   if (gameState !== STATES.PLAYING) {
     orbs.forEach((o,i) => {

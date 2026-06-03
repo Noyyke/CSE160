@@ -46,57 +46,364 @@ function mulberry32(seed) {
 
 // ── Skybox ───────────────────────────────────────────────────────────────────
 export function buildSkybox(scene) {
-  const skyGeo = new THREE.SphereGeometry(300,32,16);
-  const skyMat = new THREE.ShaderMaterial({
-    side:THREE.BackSide,
-    uniforms:{
-      topColor:   {value:new THREE.Color(0x000d28)},
-      bottomColor:{value:new THREE.Color(0x330055)},
-      midColor:   {value:new THREE.Color(0x0d0050)},
-    },
-    vertexShader:`varying vec3 vWorldPos;
-      void main(){vWorldPos=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
-    fragmentShader:`uniform vec3 topColor,bottomColor,midColor;varying vec3 vWorldPos;
-      void main(){float t=clamp((vWorldPos.y+100.0)/200.0,0.0,1.0);
-        vec3 col=mix(bottomColor,midColor,smoothstep(0.0,0.35,t));
-        col=mix(col,topColor,smoothstep(0.35,1.0,t));gl_FragColor=vec4(col,1.0);}`,
-  });
-  scene.add(new THREE.Mesh(skyGeo,skyMat));
-
-  const N=4000, pos=new Float32Array(N*3), col=new Float32Array(N*3);
-  const pal=[[1,1,1],[.6,.8,1],[1,.85,.6],[.9,.5,1],[.5,1,.9]];
-  for(let i=0;i<N;i++){
-    const th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1), r=280;
-    pos[i*3]=r*Math.sin(ph)*Math.cos(th); pos[i*3+1]=r*Math.abs(Math.cos(ph)); pos[i*3+2]=r*Math.sin(ph)*Math.sin(th);
-    const c=pal[Math.floor(Math.random()*pal.length)];
-    col[i*3]=c[0]; col[i*3+1]=c[1]; col[i*3+2]=c[2];
-  }
-  const sg=new THREE.BufferGeometry();
-  sg.setAttribute('position',new THREE.BufferAttribute(pos,3));
-  sg.setAttribute('color',new THREE.BufferAttribute(col,3));
-  scene.add(new THREE.Points(sg,new THREE.PointsMaterial({
-    vertexColors:true,size:1.6,sizeAttenuation:true,transparent:true,opacity:.92
-  })));
-
-  const nebulas=[
-    {color:'#ff00cc',yRot:.4, xRot:.18,x: 60,y: 90,z:-180},
-    {color:'#00aaff',yRot:-.5,xRot:.12,x:-80,y: 70,z:-160},
-    {color:'#8800ff',yRot:1.1,xRot:.08,x: 20,y:110,z: 150},
-  ];
-  nebulas.forEach(n=>{
-    const cv=document.createElement('canvas'); cv.width=512; cv.height=256;
-    const ctx=cv.getContext('2d');
-    const g=ctx.createLinearGradient(0,0,512,256);
-    g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(.4,n.color+'aa');
-    g.addColorStop(.6,n.color+'88');   g.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=g; ctx.fillRect(0,0,512,256);
-    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(200,100),
-      new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:true,opacity:.28,
-        side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
-    mesh.position.set(n.x,n.y,n.z); mesh.rotation.y=n.yRot; mesh.rotation.x=n.xRot;
+    // Large sphere, inside-out so the camera is always inside it
+    const geo = new THREE.SphereGeometry(450, 64, 32);
+    geo.scale(-1, 1, 1); // flip normals inward
+   
+    const mat = new THREE.ShaderMaterial({
+      side: THREE.FrontSide,
+      depthWrite: false,
+   
+      uniforms: {
+        uTime: { value: 0 },
+      },
+   
+      vertexShader: /* glsl */`
+        varying vec3 vWorldPos;
+        void main() {
+          vWorldPos = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+   
+      fragmentShader: /* glsl */`
+        varying vec3 vWorldPos;
+        uniform float uTime;
+   
+        // ── Palette (tweak these to taste) ──
+        // zenith  → deep indigo/violet
+        const vec3 COL_ZENITH  = vec3(0.04, 0.01, 0.18);
+        // mid sky → magenta-pink
+        const vec3 COL_MID     = vec3(0.55, 0.05, 0.38);
+        // horizon → amber-orange smog glow
+        const vec3 COL_HORIZON = vec3(0.95, 0.28, 0.05);
+        // low haze → deep rust / city glow
+        const vec3 COL_LOW     = vec3(0.30, 0.07, 0.02);
+   
+        // ── Helpers ──
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+        }
+   
+        void main() {
+          vec3 dir = normalize(vWorldPos);
+          float h   = dir.y;           // -1 (down) … +1 (up)
+          float hN  = h * 0.5 + 0.5;  // 0 (ground) … 1 (zenith)
+   
+          // ── Sky gradient ──
+          vec3 sky;
+          if (hN > 0.55) {
+            sky = mix(COL_MID,     COL_ZENITH,  smoothstep(0.55, 1.0,  hN));
+          } else if (hN > 0.25) {
+            sky = mix(COL_HORIZON, COL_MID,     smoothstep(0.25, 0.55, hN));
+          } else {
+            sky = mix(COL_LOW,     COL_HORIZON, smoothstep(0.0,  0.25, hN));
+          }
+   
+          // ── Sun / horizon smog bloom ──
+          // The "sun" sits just below the horizon, casting an orange glow up
+          vec3 sunDir = normalize(vec3(0.6, -0.08, -0.8));
+          float sunDot = dot(dir, sunDir);
+          float sunGlow = pow(max(0.0, sunDot), 6.0) * 1.2;
+          sky += vec3(1.0, 0.45, 0.05) * sunGlow;
+   
+          // Wider halo
+          float halo = pow(max(0.0, sunDot), 2.5) * 0.35;
+          sky += vec3(0.8, 0.2, 0.0) * halo;
+   
+          // Horizon band — extra smog warmth
+          float horizBand = exp(-abs(h) * 4.5) * 0.6;
+          sky += vec3(0.7, 0.18, 0.0) * horizBand;
+   
+          // ── Moon ──
+          // A crisp disc high in the sky, cool blue-white with a halo
+          vec3 moonDir = normalize(vec3(-0.45, 0.72, -0.53));
+          float moonDot = dot(dir, moonDir);
+          float moonDisc = smoothstep(0.9985, 0.9990, moonDot);       // disc edge
+          float moonHalo = pow(max(0.0, moonDot), 90.0) * 0.4;        // soft halo
+          vec3 moonCol = vec3(0.75, 0.88, 1.0);
+          sky += moonCol * moonDisc * 3.5;
+          sky += moonCol * moonHalo;
+   
+          // ── God rays / sunburst ──
+          // Several thin radial streaks from the sun position
+          float angle = atan(dir.x - sunDir.x, dir.z - sunDir.z);
+          float rays = abs(sin(angle * 7.0)) * pow(max(0.0, sunDot), 4.0) * 0.18;
+          sky += vec3(1.0, 0.5, 0.1) * rays;
+   
+          // ── Stars ──
+          // Only visible above the horizon, fading near the glow
+          if (h > 0.05) {
+            // Tile space to get point-like stars
+            vec2 starUV = floor(dir.xz / (dir.y + 0.001) * 18.0);
+            float star = step(0.985, hash(starUV));
+            float twinkle = 0.7 + 0.3 * sin(uTime * 2.3 + hash(starUV + 0.1) * 6.28);
+            float starMask = smoothstep(0.05, 0.35, h); // fade near horizon
+            sky += vec3(0.9, 0.95, 1.0) * star * twinkle * starMask * 0.9;
+          }
+   
+          gl_FragColor = vec4(sky, 1.0);
+        }
+      `,
+    });
+   
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.renderOrder = -1000;
+    // Attach an update hook so asg5.js can tick uTime if desired
+    // (totally optional — stars twinkle even without it if you call it once)
+    mesh.userData.update = (dt) => { mat.uniforms.uTime.value += dt; };
     scene.add(mesh);
-  });
-}
+   
+    // Also push the fog color to match the horizon smog
+    scene.fog.color.setRGB(0.18, 0.04, 0.08);
+   
+    return mesh;
+  }
+
+
+
+
+  //-----Signs------------------------------------------------------
+  export function buildNeonSigns(scene) {
+    // ── Sign data — position, rotation, text lines, color ──
+    // Positions are world-space; adjust to taste for your city layout.
+    const SIGN_DEFS = [
+      // Tall vertical kanji column, right side of street
+      {
+        pos:   [14, 7, -18],
+        rotY:  -0.3,
+        lines: ['電', '光', '街', '道'],
+        color: '#ff2288',
+        vertical: true,
+        flicker: true,
+        scale: 1.0,
+      },
+      // Horizontal marquee — left side
+      {
+        pos:   [-16, 6, -22],
+        rotY:  0.25,
+        lines: ['ネオン', '東京ナイト'],
+        color: '#00eeff',
+        vertical: false,
+        flicker: false,
+        scale: 1.1,
+      },
+      // Small shop sign — close to player start, angled
+      {
+        pos:   [8, 4.5, -9],
+        rotY:  -1.1,
+        lines: ['ラーメン', '24時間'],
+        color: '#ffaa00',
+        vertical: false,
+        flicker: true,
+        scale: 0.75,
+      },
+      // Big backdrop sign — deep in the scene
+      {
+        pos:   [-6, 10, -38],
+        rotY:  0.0,
+        lines: ['未来', 'FUTURE'],
+        color: '#cc00ff',
+        vertical: false,
+        flicker: false,
+        scale: 1.4,
+      },
+      // Vertical column on left
+      {
+        pos:   [-20, 8, -14],
+        rotY:  0.5,
+        lines: ['酒', '屋', '今', '夜'],
+        color: '#00ff88',
+        vertical: true,
+        flicker: true,
+        scale: 0.9,
+      },
+      // Low sign near dance floor
+      {
+        pos:   [5, 3.5, 6],
+        rotY:  -0.8,
+        lines: ['DANCE', 'FLOOR'],
+        color: '#ff6600',
+        vertical: false,
+        flicker: false,
+        scale: 0.8,
+      },
+      // Distant high sign
+      {
+        pos:   [22, 12, -30],
+        rotY:  -0.6,
+        lines: ['サイバー', '都市'],
+        color: '#ff0066',
+        vertical: false,
+        flicker: true,
+        scale: 1.2,
+      },
+    ];
+   
+    const signs = [];
+   
+    SIGN_DEFS.forEach(def => {
+      const sign = _buildOneSign(scene, def);
+      signs.push(sign);
+    });
+   
+    // Return an update-able array
+    return {
+      signs,
+      update(dt) {
+        const t = performance.now() * 0.001;
+        signs.forEach(s => s.update(dt, t));
+      },
+    };
+  }
+   
+  // ── Internal sign builder ──
+  function _buildOneSign(scene, def) {
+    const { pos, rotY, lines, color, vertical, flicker, scale } = def;
+    const col = new THREE.Color(color);
+   
+    // ── Canvas texture ──
+    const CHAR_PX   = 64;
+    const PAD       = 10;
+    const lineCount = lines.length;
+    const maxLen    = Math.max(...lines.map(l => l.length));
+   
+    let cvW, cvH;
+    if (vertical) {
+      // Each character stacked
+      cvW = CHAR_PX + PAD * 2;
+      cvH = CHAR_PX * lineCount + PAD * 2;
+    } else {
+      cvW = CHAR_PX * maxLen + PAD * 2;
+      cvH = CHAR_PX * lineCount + PAD * 2;
+    }
+   
+    const canvas = document.createElement('canvas');
+    canvas.width  = cvW;
+    canvas.height = cvH;
+    const ctx = canvas.getContext('2d');
+   
+    // Background — very dark, almost transparent so emissive glow dominates
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(0, 0, cvW, cvH);
+   
+    // Neon text glow pass (blurred, thicker)
+    ctx.font      = `bold ${CHAR_PX - 8}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = color;
+    ctx.shadowBlur  = 18;
+    ctx.fillStyle   = '#ffffff';
+   
+    if (vertical) {
+      // Each line is one character (or short string), stacked vertically
+      lines.forEach((line, i) => {
+        const y = PAD + CHAR_PX * i + CHAR_PX / 2;
+        ctx.fillText(line, cvW / 2, y);
+      });
+    } else {
+      lines.forEach((line, i) => {
+        const y = PAD + CHAR_PX * i + CHAR_PX / 2;
+        ctx.fillText(line, cvW / 2, y);
+      });
+    }
+   
+    const tex = new THREE.CanvasTexture(canvas);
+   
+    // ── Board geometry ──
+    const aspect = cvW / cvH;
+    const boardH = vertical ? 3.0 * scale : 1.5 * scale;
+    const boardW = boardH * aspect;
+    const boardD = 0.12;
+   
+    const boardGeo = new THREE.BoxGeometry(boardW, boardH, boardD);
+    const boardMat = new THREE.MeshStandardMaterial({
+      color:             new THREE.Color(0x0a0a0a),
+      emissive:          col,
+      emissiveIntensity: 1.2,
+      emissiveMap:       tex,
+      roughness:         0.9,
+      metalness:         0.2,
+    });
+   
+    const board = new THREE.Mesh(boardGeo, boardMat);
+    board.position.set(...pos);
+    board.rotation.y = rotY;
+    board.castShadow = false;
+    scene.add(board);
+   
+    // ── Border trim — thin outline box in the sign color ──
+    const trimGeo = new THREE.BoxGeometry(boardW + 0.1, boardH + 0.1, boardD * 0.5);
+    const trimMat = new THREE.MeshStandardMaterial({
+      color:             col,
+      emissive:          col,
+      emissiveIntensity: 2.0,
+      roughness:         0.5,
+      metalness:         0.8,
+      wireframe:         true,
+    });
+    const trim = new THREE.Mesh(trimGeo, trimMat);
+    trim.position.set(...pos);
+    trim.rotation.y = rotY;
+    scene.add(trim);
+   
+    // ── Support pole (for freestanding signs) ──
+    if (pos[1] > 5) {
+      const poleH   = pos[1] - 0.5;
+      const poleGeo = new THREE.CylinderGeometry(0.04, 0.04, poleH, 6);
+      const poleMat = new THREE.MeshStandardMaterial({
+        color: 0x222222, roughness: 0.8, metalness: 0.6,
+      });
+      const pole = new THREE.Mesh(poleGeo, poleMat);
+      pole.position.set(pos[0], poleH / 2, pos[2]);
+      scene.add(pole);
+    }
+   
+    // ── Point light ──
+    const light = new THREE.PointLight(col, 1.8, 18, 2.0);
+    light.position.set(pos[0], pos[1], pos[2] + 1.5);
+    scene.add(light);
+   
+    // ── Flicker state ──
+    let flickerTimer  = 0;
+    let flickerActive = false;
+    let flickerDelay  = 2 + Math.random() * 6;
+    const BASE_INTENSITY = boardMat.emissiveIntensity;
+   
+    // ── Per-frame update ──
+    function update(dt, t) {
+      if (!flicker) return;
+   
+      flickerTimer += dt;
+      if (flickerTimer > flickerDelay) {
+        flickerTimer  = 0;
+        flickerDelay  = 3 + Math.random() * 8;
+        flickerActive = true;
+      }
+   
+      if (flickerActive) {
+        // Quick strobe — a few fast on/off bursts then back to normal
+        const phase = (t * 18) % 1;
+        const on    = phase > 0.4;
+        const intens = on ? BASE_INTENSITY : 0.0;
+        boardMat.emissiveIntensity = intens;
+        light.intensity = on ? 1.8 : 0.0;
+   
+        // Finish flicker after ~0.35 s
+        if (flickerTimer > 0.35) {
+          flickerActive = false;
+          boardMat.emissiveIntensity = BASE_INTENSITY;
+          light.intensity = 1.8;
+        }
+      }
+    }
+   
+    return { board, trim, light, update };
+  }
+
+
+
+
 
 // ── Lights ───────────────────────────────────────────────────────────────────
 export function buildLights(scene, CFG) {
