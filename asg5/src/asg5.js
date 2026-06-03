@@ -25,14 +25,25 @@ const TARGET_Z     = -8;                          // world z of target zone / re
 const HIT_Z        = 0;                           // target zone z (camera-relative)
 const HIT_WINDOW   = 0.18;                        // ±seconds for a hit
 const PERFECT_WIN  = 0.07;
-const ARROW_SPEED  = 14;                          // units/sec (travel time ~2.8s)
-const TRAVEL_TIME  = HIGHWAY_LEN / ARROW_SPEED;
+const APPROACH_BEATS = 2.5;                     // beats of runway — same musical spacing at any BPM
+const BPM_REF        = 128;                     // reference BPM for random-mode default speed
+let arrowSpeed       = 14;                        // world units/sec (derived from BPM)
+let travelTime       = HIGHWAY_LEN / arrowSpeed;  // seconds before note.time that head spawns
 const HOLD_END_BONUS = 150;                       // bonus for holding through the tail
 const HOLD_BODY_SCALE = 0.58;                   // width vs note head (single extruded beam)
 const HOLD_BODY_MIN_LEN = 0.55;                 // minimum tail length in world units
 const WRONG_PRESS_COOLDOWN = 0.1;               // debounce multi-key mash to one penalty
+let audioHitLatency = 0.05;                     // seconds — speaker/keyboard delay (UI-adjustable)
 const BPM_DEFAULT  = 128;
 const PROXIMITY_R  = 7;                           // metres to trigger game prompt
+
+function applyApproachTiming(bpmVal) {
+  const b = bpmVal || BPM_DEFAULT;
+  travelTime = (60 / b) * APPROACH_BEATS;
+  arrowSpeed = HIGHWAY_LEN / travelTime;
+}
+
+applyApproachTiming(BPM_REF);
 
 // ─────────────────────────────────────────────
 //  Renderer / Scene / Camera
@@ -499,7 +510,7 @@ function buildTargetZones() {
 // ─────────────────────────────────────────────
 //  Arrow Pool
 // ─────────────────────────────────────────────
-const POOL_SIZE = 60;
+const POOL_SIZE = 80;
 const arrowPool = [];
 const activeArrows = [];
 
@@ -529,13 +540,8 @@ function buildArrowPool() {
     const mesh = new THREE.Mesh(_arrowGeos[lane], _arrowMats[lane]);
     mesh.rotation.z = LANE_ROT_Z[lane];
     mesh.visible = false;
-    mesh.castShadow = true;
-
-    // Attach a small glow light
-    const pl = new THREE.PointLight(LANE_COLORS[lane], 0, 5);
-    mesh.add(pl);
-    mesh.userData.light = pl;
-    mesh.userData.lane  = lane;
+    mesh.castShadow = false;
+    mesh.userData.lane = lane;
 
     scene.add(mesh);
     arrowPool.push(mesh);
@@ -554,7 +560,6 @@ function getPooledArrow(lane) {
     if(!a.visible) {
       a.userData.lane = lane;
       a.material = _arrowMats[lane];
-      a.userData.light.color.setHex(LANE_COLORS[lane]);
       a.rotation.z = LANE_ROT_Z[lane];
       a.visible=true; return a;
     }
@@ -572,8 +577,9 @@ function releaseHoldBody(arrow) {
 
 function recycleArrow(arrow) {
   releaseHoldBody(arrow);
+  arrow.userData._bodyHeadZ = undefined;
+  arrow.userData._bodyLen   = undefined;
   arrow.visible=false;
-  arrow.userData.light.intensity=0;
   arrow.userData.holdStarted=false;
   const idx=activeArrows.indexOf(arrow);
   if(idx>=0) activeArrows.splice(idx,1);
@@ -582,7 +588,7 @@ function recycleArrow(arrow) {
 // ─────────────────────────────────────────────
 //  Hold body — one smooth extruded arrow beam (depth scaled to duration)
 // ─────────────────────────────────────────────
-const HOLD_BODY_POOL_SIZE = 32;
+const HOLD_BODY_POOL_SIZE = 24;
 const holdBodyPool        = [];
 const _holdBodyGeos       = [];
 const _holdBodyMats       = [];
@@ -595,8 +601,8 @@ function buildHoldBodyPool() {
     bevelEnabled: true,
     bevelThickness: 0.04,
     bevelSize: 0.04,
-    bevelSegments: 4,
-    curveSegments: 8,
+    bevelSegments: 2,
+    curveSegments: 4,
   };
   for(let lane=0; lane<LANE_COUNT; lane++) {
     const geo = new THREE.ExtrudeGeometry(shape, ext);
@@ -617,7 +623,7 @@ function buildHoldBodyPool() {
     const mesh = new THREE.Mesh(_holdBodyGeos[lane], _holdBodyMats[lane]);
     mesh.rotation.z = LANE_ROT_Z[lane];
     mesh.visible = false;
-    mesh.castShadow = true;
+    mesh.castShadow = false;
     scene.add(mesh);
     holdBodyPool.push(mesh);
   }
@@ -644,9 +650,13 @@ function getPooledHoldBody(lane) {
 function updateHoldBodyVisual(arrow) {
   if(!arrow.userData.isHold) return;
 
-  const len   = Math.max(arrow.userData.duration * ARROW_SPEED, HOLD_BODY_MIN_LEN);
   const headZ = arrow.position.z;
   const lane  = arrow.userData.lane;
+  const len   = Math.max(arrow.userData.duration * arrowSpeed, HOLD_BODY_MIN_LEN);
+
+  if(arrow.userData._bodyHeadZ === headZ && arrow.userData._bodyLen === len) return;
+  arrow.userData._bodyHeadZ = headZ;
+  arrow.userData._bodyLen   = len;
 
   let body = arrow.userData.holdBody;
   if(!body) {
@@ -658,13 +668,12 @@ function updateHoldBodyVisual(arrow) {
   body.material = _holdBodyMats[lane];
   body.rotation.z = LANE_ROT_Z[lane];
   body.scale.set(HOLD_BODY_SCALE, HOLD_BODY_SCALE, len);
-  // Centered unit extrude: front edge meets the head, tail extends backward (-Z)
   body.position.set(LANE_X[lane], 0.48, headZ - len * 0.5);
   body.visible = true;
 }
 
 function arrowZAtSongTime(st, spawnTime) {
-  return (TARGET_Z - HIGHWAY_LEN) + (st - spawnTime) * ARROW_SPEED;
+  return (TARGET_Z - HIGHWAY_LEN) + (st - spawnTime) * arrowSpeed;
 }
 
 // ─────────────────────────────────────────────
@@ -688,20 +697,25 @@ let totalNotes = 0;
 //  to freeze at spawn position (stuck at z = TARGET_Z - HIGHWAY_LEN)
 //  because songTime() always returned 0 or a stale value.
 // ─────────────────────────────────────────────
-let songStartWall = 0;   // performance.now() snapshot at game start (ms)
-let songPauseAccum = 0;  // accumulated pause time (unused here, for extensibility)
+let songStartWall = 0;   // performance.now() fallback when no audio (ms)
+let useAudioClock = false;
+let songAudioStartCtx = 0;
 
 /**
- * Returns elapsed game time in seconds since enterGame() was called.
- * Uses performance.now() so it works regardless of AudioContext state.
- * Returns 0 only when no game has been started yet.
+ * Chart time in seconds — matches editor playhead (seconds into the MP3 from t=0).
+ * Note times in JSON are absolute file times, not relative to chart.offset.
  */
 function songTime() {
-  if(songStartWall === 0) return 0;
-  return (performance.now() - songStartWall) / 1000;
+  if(gameState !== STATES.PLAYING) return 0;
+  let t = 0;
+  if(useAudioClock && audioCtx) {
+    t = audioCtx.currentTime - songAudioStartCtx;
+  } else if(songStartWall !== 0) {
+    t = (performance.now() - songStartWall) / 1000;
+  }
+  return Math.max(0, t - audioHitLatency);
 }
 
-// Audio (separate from songTime — audio playback is best-effort)
 let audioCtx   = null;
 let songBuffer = null;
 let songSource = null;
@@ -783,22 +797,27 @@ function showJudge(text, color) {
   judgeEl.style.opacity = '1';
   judgeEl.style.transform = 'translateX(-50%) scale(1.3)';
   judgeTimer = 0.6;
+  if(gameState===STATES.PLAYING) pulseHoloCube(color);
 }
 
+let _hudDirty = true;
+function markHudDirty() { _hudDirty = true; }
+
 function updateHUD() {
-  if(gameState===STATES.PLAYING) {
-    scoreEl.textContent = `${score.toString().padStart(7,'0')}`;
-    comboEl.textContent = combo>1 ? `${combo}x` : '';
-  }
+  if(gameState!==STATES.PLAYING || !_hudDirty) return;
+  _hudDirty = false;
+  scoreEl.textContent = `${score.toString().padStart(7,'0')}`;
+  comboEl.textContent = combo>1 ? `${combo}x` : '';
 }
 
 // ─────────────────────────────────────────────
 //  Game Camera positions
 // ─────────────────────────────────────────────
-const GAME_CAM_POS = new THREE.Vector3(0, 2.2, 6);
+const GAME_CAM_POS = new THREE.Vector3(0, 2.5, 2);
 const GAME_CAM_ROT = new THREE.Euler(-0.18, 0, 0);
 let exploreCamPos  = new THREE.Vector3();
 let exploreCamQuat = new THREE.Quaternion();
+let _playPixelRatio = 1;
 
 function enterGame() {
   if(gameState===STATES.PLAYING) return;
@@ -823,12 +842,17 @@ function enterGame() {
   score=0;combo=0;maxCombo=0;perfects=0;goods=0;misses=0;totalNotes=0;noteIndex=0;
   lastWrongPressTime=-1;
 
-  // ─── FIX: Record wall-clock start time for songTime().
-  // We do this BEFORE any async audio work so the timer is accurate.
-  // AudioContext.currentTime was the old approach and fails because
-  // AudioContext starts in a suspended state and its clock doesn't
-  // advance until resume() completes (which is async).
-  songStartWall = performance.now();
+  songStartWall = 0;
+  useAudioClock = false;
+  _hudDirty = true;
+  renderer.shadowMap.enabled = false;
+  cityGroup.visible = false;
+  moonLight.castShadow = false;
+  if(floorSpot) floorSpot.intensity = 0;
+  _playPixelRatio = renderer.getPixelRatio();
+  renderer.setPixelRatio(1);
+
+  applyApproachTiming(chart?.bpm || bpm);
 
   // Show game HUD
   hudEl.style.display='block';
@@ -838,24 +862,42 @@ function enterGame() {
   // Init audio context on demand (requires user gesture — we're in a keydown handler here)
   if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
 
-  // Activate selected mode
   if(gameMode==='chart' && chart) {
-    scheduleChart();
+    if(songBuffer && audioCtx) {
+      scheduleChart();
+    } else {
+      songStartWall = performance.now();
+    }
   } else {
-    // Random mode — no audio scheduling needed; wall-clock timer drives everything
+    songStartWall = performance.now();
     randomActive = true;
     beatTimer    = 0;
     beatInterval = 60 / bpm;
   }
 }
 
+function stopSongAudio() {
+  if(songSource) {
+    try { songSource.stop(); songSource.disconnect(); } catch(e) {}
+    songSource = null;
+  }
+  useAudioClock = false;
+}
+
+function restoreExploreRendering() {
+  cityGroup.visible = true;
+  moonLight.castShadow = true;
+  renderer.shadowMap.enabled = true;
+  renderer.setPixelRatio(_playPixelRatio);
+  if(floorSpot) floorSpot.intensity = 4;
+}
+
 function exitGame() {
   gameState=STATES.EXPLORE;
   randomActive=false;
-  songStartWall=0;  // reset so songTime() returns 0 between games
-
-  // Stop song if playing
-  if(songSource) { try{songSource.stop();}catch(e){} songSource=null; }
+  songStartWall=0;
+  stopSongAudio();
+  restoreExploreRendering();
 
   // Recycle all arrows
   [...activeArrows].forEach(a=>recycleArrow(a));
@@ -873,7 +915,8 @@ function endGame() {
   gameState=STATES.RESULT;
   randomActive=false;
   songStartWall=0;
-  if(songSource) { try{songSource.stop();}catch(e){} songSource=null; }
+  stopSongAudio();
+  restoreExploreRendering();
   [...activeArrows].forEach(a=>recycleArrow(a));
   resultEl.style.display='flex';
   document.getElementById('res-score-big').textContent = score.toString().padStart(7,'0');
@@ -894,10 +937,10 @@ function endGame() {
 
 function spawnNote({ lane, time, duration = 0 }) {
   const arrow = getPooledArrow(lane);
-  if(!arrow) return;
+  if(!arrow) return false;
 
   const st         = songTime();
-  const spawnTime  = time - TRAVEL_TIME;
+  const spawnTime  = time - travelTime;
   const isHold     = duration > 0;
 
   arrow.position.set(LANE_X[lane], 0.5, arrowZAtSongTime(st, spawnTime));
@@ -911,42 +954,38 @@ function spawnNote({ lane, time, duration = 0 }) {
   arrow.userData.hit         = false;
   arrow.userData.missed      = false;
   arrow.userData.holdBody    = null;
-  arrow.userData.light.intensity = 1.2;
 
   if(isHold) updateHoldBodyVisual(arrow);
 
   activeArrows.push(arrow);
   totalNotes++;
+  return true;
 }
 
 function spawnTap(lane) {
-  spawnNote({ lane, time: songTime() + TRAVEL_TIME, duration: 0 });
+  spawnNote({ lane, time: songTime() + travelTime, duration: 0 });
 }
 
 function scheduleChart() {
-  // ─── FIX: songStartWall is already set in enterGame() before this is called.
-  // If audio is available, start it now. The audio clock and wall clock will
-  // drift slightly over long songs but for a game this is acceptable.
-  // The key change: we no longer rely on audioCtx.currentTime for game logic.
-  if(songBuffer && audioCtx) {
-    // Resume context if suspended (required by browser autoplay policy)
-    const startAudio = () => {
-      if(songSource) { try{songSource.stop();}catch(e){} }
-      songSource = audioCtx.createBufferSource();
-      songSource.buffer = songBuffer;
-      songSource.connect(audioCtx.destination);
-      const offsetSec = chart.offset || 0;
-      songSource.start(0, Math.max(0, offsetSec));
-      songSource.onended = ()=>{ if(gameState===STATES.PLAYING) endGame(); };
-    };
+  if(!songBuffer || !audioCtx) return;
 
-    if(audioCtx.state === 'suspended') {
-      audioCtx.resume().then(startAudio);
-    } else {
-      startAudio();
-    }
+  const startAudio = () => {
+    stopSongAudio();
+    songSource = audioCtx.createBufferSource();
+    songSource.buffer = songBuffer;
+    songSource.connect(audioCtx.destination);
+    songAudioStartCtx = audioCtx.currentTime;
+    useAudioClock = true;
+    // Note times match editor playhead = seconds into the MP3 from the start
+    songSource.start(0, 0);
+    songSource.onended = ()=>{ if(gameState===STATES.PLAYING) endGame(); };
+  };
+
+  if(audioCtx.state === 'suspended') {
+    audioCtx.resume().then(startAudio);
+  } else {
+    startAudio();
   }
-  // No audio: wall-clock timer drives note spawning; chart ends when all notes processed.
 }
 
 // ─────────────────────────────────────────────
@@ -982,13 +1021,14 @@ function punishWrongInput() {
   lastWrongPressTime = t;
   combo = 0;
   misses++;
+  markHudDirty();
   showJudge('WRONG','#ff4444');
-  updateHUD();
 }
 
 function scoreHeadHit(delta) {
   combo++;
   if(combo>maxCombo) maxCombo=combo;
+  markHudDirty();
   if(delta<=PERFECT_WIN) {
     score+=300+combo*10;
     perfects++;
@@ -1006,7 +1046,7 @@ function startHoldHead(arrow, delta) {
   arrow.userData.hit         = true;
   const flash = scoreHeadHit(delta);
   flashTarget(arrow.userData.lane, flash);
-  updateHUD();
+  markHudDirty();
 }
 
 function resetTargetGlow(lane) {
@@ -1023,7 +1063,7 @@ function completeHold(arrow) {
   score += HOLD_END_BONUS + combo * 5;
   showJudge('HOLD!','#88ff00');
   flashTarget(lane, 1.2);
-  updateHUD();
+  markHudDirty();
   recycleArrow(arrow);
 }
 
@@ -1033,9 +1073,9 @@ function failHold(arrow, earlyRelease) {
   const lane = arrow.userData.lane;
   misses++;
   combo = 0;
+  markHudDirty();
   showJudge(earlyRelease ? 'HOLD BREAK' : 'MISS', '#ff4444');
   resetTargetGlow(lane);
-  updateHUD();
   recycleArrow(arrow);
 }
 
@@ -1069,7 +1109,7 @@ function handleHitInput(lane) {
   best.userData.hit = true;
   const flash = scoreHeadHit(bestDelta);
   flashTarget(lane, flash);
-  updateHUD();
+  markHudDirty();
   recycleArrow(best);
 }
 
@@ -1137,8 +1177,8 @@ function loadGLBModel() {
     'models/model.glb',
     (gltf)=>{
       const m = gltf.scene;
-      m.scale.setScalar(1.5);
-      m.position.set(12,0,5);
+      m.scale.setScalar(4.5);
+      m.position.set(12,1.3,5);
       m.rotation.y = -Math.PI/4;
       m.traverse(c=>{ if(c.isMesh){c.castShadow=true;c.receiveShadow=true;} });
       scene.add(m);
@@ -1215,7 +1255,7 @@ function buildWorldExtras() {
     })
   );
   octa.position.set(0,3.5,-4);
-  floatingRings.push({mesh:octa, phase:0, isOcta:true});
+  holoCubeRef.mesh = octa;
   scene.add(octa);
 
   // Ground accent cones
@@ -1276,6 +1316,38 @@ function buildWorldExtras() {
 
 const floatingRings=[];
 const discoRef={mesh:null,light:null};
+const holoCubeRef={mesh:null};
+const holoBaseColor=new THREE.Color(0x00ffff);
+let holoPulseTimer=0;
+const HOLO_PULSE_DURATION=0.55;
+const _holoPulseColor=new THREE.Color();
+
+function pulseHoloCube(hexColor) {
+  if(!holoCubeRef.mesh) return;
+  _holoPulseColor.set(hexColor);
+  holoPulseTimer=HOLO_PULSE_DURATION;
+}
+
+function updateHoloCube(dt, t) {
+  const mesh=holoCubeRef.mesh;
+  if(!mesh) return;
+  mesh.rotation.x+=0.01;
+  mesh.rotation.y+=0.007;
+  mesh.position.y=3.5+Math.sin(t*0.8)*0.2;
+
+  const mat=mesh.material;
+  if(holoPulseTimer>0) {
+    holoPulseTimer-=dt;
+    const blend=Math.min(1, holoPulseTimer/HOLO_PULSE_DURATION);
+    mat.emissive.copy(_holoPulseColor);
+    mat.color.copy(_holoPulseColor);
+    mat.emissiveIntensity=1+blend*2.5;
+  } else {
+    mat.emissive.lerp(holoBaseColor, 0.1);
+    mat.color.lerp(holoBaseColor, 0.1);
+    mat.emissiveIntensity+=(1-mat.emissiveIntensity)*0.1;
+  }
+}
 
 // ─────────────────────────────────────────────
 //  Build everything
@@ -1309,6 +1381,17 @@ const clock = new THREE.Clock();
 const _pos2D   = new THREE.Vector2();
 const _floor2D = new THREE.Vector2(FLOOR_POS.x, FLOOR_POS.z);
 
+let _debugFrame = 0;
+function updateDebugHud() {
+  const el = document.getElementById('numdot');
+  if(!el) return;
+  if(gameState === STATES.PLAYING) {
+    el.textContent = `Notes: ${activeArrows.length} · ${Math.round(arrowSpeed)} u/s`;
+  } else if(++_debugFrame % 120 === 0) {
+    el.textContent = `Explore · ${renderer.info.render.triangles} tris`;
+  }
+}
+
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
@@ -1316,34 +1399,26 @@ function animate() {
 
   const t = clock.getElapsedTime();
 
-  // ── Animate world ──────────────────────────
+  // Wireframe holo cube — always spins; flashes judge colors during play
+  updateHoloCube(dt, t);
+
+  // ── Animate world (skip heavy updates during gameplay) ──
+  if(gameState !== STATES.PLAYING) {
   // Floating orbs
   orbs.forEach((o,i)=>{
     const y = o.baseY + Math.sin(t*1.2+o.phase)*0.3;
     o.mesh.position.y=y;
     orbLights[i].position.y=y;
-    // Only copy x/z once (they never change)
   });
 
-  // Floating rings
   floatingRings.forEach(r=>{
-    if(r.isOcta) {
-      r.mesh.rotation.x+=0.01; r.mesh.rotation.y+=0.007;
-      r.mesh.position.y=3.5+Math.sin(t*0.8)*0.2;
-    } else {
-      r.mesh.rotation.z += 0.005;
-    }
+    r.mesh.rotation.z += 0.005;
   });
 
-  // Disco ball
   if(discoRef.mesh) {
     discoRef.mesh.rotation.y+=0.01;
-    if(gameState===STATES.PLAYING) {
-      discoRef.light.intensity=2+Math.sin(t*8)*1.5;
-      discoRef.light.color.setHSL((t*0.3)%1, 1, 0.5);
-    } else {
-      discoRef.light.intensity=1;
-    }
+    discoRef.light.intensity=1;
+  }
   }
 
   // ── FPS movement (EXPLORE / PROMPT) ────────
@@ -1400,14 +1475,13 @@ function animate() {
     if(gameMode==='chart' && chart) {
       while(noteIndex<chart.notes.length) {
         const note=chart.notes[noteIndex];
-        // Spawn the arrow TRAVEL_TIME seconds before its target time
-        if(note.time - TRAVEL_TIME <= st) {
-          spawnNote({
+        if(note.time - travelTime <= st) {
+          if(spawnNote({
             lane:     note.lane,
             time:     note.time,
             duration: note.duration || 0,
-          });
-          noteIndex++;
+          })) noteIndex++;
+          else break;
         } else break;
       }
       // Chart finished — all notes spawned and cleared
@@ -1424,7 +1498,6 @@ function animate() {
       const elapsed=st - arrow.userData.spawnTime;
       arrow.position.z = arrowZAtSongTime(st, arrow.userData.spawnTime);
       arrow.position.y=0.5+Math.sin(elapsed*3)*0.04;
-      arrow.userData.light.intensity=0.8+Math.sin(elapsed*10)*0.4;
 
       if(arrow.userData.isHold) {
         updateHoldBodyVisual(arrow);
@@ -1442,7 +1515,7 @@ function animate() {
         misses++;
         combo=0;
         showJudge('MISS','#ff4444');
-        updateHUD();
+        markHudDirty();
         recycleArrow(arrow);
         i--;
       }
@@ -1460,6 +1533,7 @@ function animate() {
     updateHUD();
   }
 
+  updateDebugHud();
   renderer.render(scene, camera);
 }
 
@@ -1468,19 +1542,55 @@ animate();
 // ─────────────────────────────────────────────
 //  Expose API for HUD buttons
 // ─────────────────────────────────────────────
+async function loadSong(chartUrl, audioUrl) {
+  const chartRes = await fetch(chartUrl);
+  if(!chartRes.ok) throw new Error(`Chart not found (${chartRes.status})`);
+  const c = await chartRes.json();
+  if(!c.notes || !Array.isArray(c.notes)) throw new Error('Chart missing notes array');
+
+  chart = c;
+  gameMode = 'chart';
+  noteIndex = 0;
+  if(c.bpm) {
+    bpm = c.bpm;
+    beatInterval = 60 / bpm;
+  }
+  applyApproachTiming(c.bpm || bpm);
+
+  if(audioUrl) {
+    const audioRes = await fetch(audioUrl);
+    if(!audioRes.ok) throw new Error(`Audio not found (${audioRes.status})`);
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const arr = await audioRes.arrayBuffer();
+    songBuffer = await audioCtx.decodeAudioData(arr.slice(0));
+  }
+
+  const holds = c.notes.filter(n=>(n.duration||0)>0).length;
+  return {
+    title:     c.title || 'Untitled',
+    artist:    c.artist || '',
+    bpm:       c.bpm,
+    noteCount: c.notes.length,
+    holds,
+    duration:  songBuffer ? songBuffer.duration : null,
+  };
+}
+
 window.NeonRhythm = {
   setMode(mode)  { gameMode=mode; },
-  setBPM(val)    { bpm=val; beatInterval=60/bpm; },
-  loadChart(c)   { chart=c; gameMode='chart'; },
+  setBPM(val)    { bpm=val; beatInterval=60/bpm; applyApproachTiming(bpm); },
+  loadChart(c)   {
+    chart=c; gameMode='chart'; noteIndex=0;
+    if(c.bpm){ bpm=c.bpm; beatInterval=60/bpm; }
+    applyApproachTiming(c.bpm || bpm);
+  },
   loadAudio(buf) { songBuffer=buf; },
+  loadSong,
+  getChart: ()=>chart,
+  setTimingLatency(sec) { audioHitLatency = Number(sec) || 0; },
+  getTimingLatency: ()=>audioHitLatency,
   enterGame,
   exitGame,
   endGame,
   getState: ()=>gameState,
 };
-
-// Debug info
-setInterval(()=>{
-  document.getElementById('numdot').textContent=
-    `Active arrows: ${activeArrows.length} | Tris: ${renderer.info.render.triangles}`;
-},500);

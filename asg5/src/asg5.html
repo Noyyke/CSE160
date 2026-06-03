@@ -392,6 +392,38 @@
       #audio-upload-label:hover { color:var(--cyan); border-color:var(--cyan); }
       #audio-file { display:none; }
 
+      /* ── Song library ── */
+      #song-select-group {
+        background: rgba(0,0,30,0.7);
+        border: 1px solid rgba(255,0,170,0.2);
+        border-radius: 8px;
+        padding: 8px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 220px;
+      }
+      #song-select-group label {
+        font-family: 'Orbitron', monospace;
+        font-size: 0.62em;
+        color: var(--pink);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      #song-select {
+        background: rgba(0,0,20,0.9);
+        border: 1px solid rgba(255,0,170,0.35);
+        border-radius: 5px;
+        color: #cde;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.82em;
+        padding: 6px 8px;
+        width: 100%;
+        cursor: pointer;
+      }
+      #song-select:focus { outline: none; border-color: var(--pink); }
+      #song-status { font-size: 0.68em; color: #556; line-height: 1.35; }
+
       /* Fullscreen tweaks */
       #canvas-wrapper:fullscreen,
       #canvas-wrapper:-webkit-full-screen {
@@ -433,6 +465,15 @@
 
     <!-- ── Controls Panel ── -->
     <div class="panel">
+      <!-- Song library -->
+      <div id="song-select-group">
+        <label>Song Library</label>
+        <select id="song-select" onchange="loadSelectedSong()">
+          <option value="">— Loading songs… —</option>
+        </select>
+        <span id="song-status">Select a song to load chart + audio</span>
+      </div>
+
       <!-- Game mode -->
       <div class="ctrl-group">
         <label>Game Mode</label>
@@ -455,6 +496,14 @@
 
       <!-- Chart import -->
       <div id="chart-panel" style="display:none;">
+        <label>Timing adjust (if notes feel early/late)</label>
+        <div class="row" style="margin-bottom:6px;">
+          <span style="font-size:0.65em;color:#667;">-1s</span>
+          <input type="range" id="timing-slider" min="-1000" max="1000" step="10" value="50"
+            oninput="updateTiming(this.value)">
+          <span style="font-size:0.65em;color:#667;">+1s</span>
+          <span id="timing-val" style="min-width:48px;color:var(--cyan);font-size:0.7em;">+0.05s</span>
+        </div>
         <label>Import Chart JSON</label>
         <textarea id="chart-input" rows="2" placeholder='{"bpm":128,"offset":0,"notes":[...]}'></textarea>
         <button id="load-chart-btn" onclick="loadChartFromInput()">Load Chart</button>
@@ -506,6 +555,7 @@
         <div class="prompt-box">
           <div class="prompt-key">[ E ]  ENTER GAME</div>
           <div class="prompt-sub">You're at the dance floor</div>
+          <div class="prompt-sub" id="prompt-song" style="color:var(--green);font-size:0.85em;"></div>
           <div class="mode-row" style="margin-top:8px;justify-content:center;">
             <button class="mode-btn active" id="pmb-random" onclick="setMode('random')">Random</button>
             <button class="mode-btn"        id="pmb-chart"  onclick="setMode('chart')">Chart</button>
@@ -582,7 +632,11 @@
         });
       });
       window.addEventListener('resize', resizeCanvas);
-      window.addEventListener('load',   resizeCanvas);
+      window.addEventListener('load', ()=>{
+        resizeCanvas();
+        initSongLibrary();
+        updateTiming(50);
+      });
 
       // ── FPS colour-coding ───────────────────
       const _fpsEl = document.getElementById('perf-fps');
@@ -592,6 +646,85 @@
         _fpsEl.className = 'perf-val' + (fps>=50?' good':fps>=30?' ok':' bad');
       });
       _fpsObserver.observe(_fpsEl, {childList:true, characterData:true, subtree:true});
+
+      // ── Song library (relative to this HTML file: ../songs/) ──
+      const SONGS_BASE = new URL('../songs/', window.location.href).href;
+      let songManifest = [];
+
+      function updatePromptSong(text) {
+        const el = document.getElementById('prompt-song');
+        if(el) el.textContent = text || '';
+      }
+
+      function updateChartStatus(info) {
+        const status = document.getElementById('chart-status');
+        if(!status || !info) return;
+        status.textContent = `✓ ${info.noteCount} notes (${info.holds} holds, ${info.bpm||'?'} BPM)`;
+        status.style.color = '#00ff88';
+      }
+
+      async function initSongLibrary() {
+        const sel = document.getElementById('song-select');
+        const status = document.getElementById('song-status');
+        try {
+          const res = await fetch(new URL('manifest.json', SONGS_BASE));
+          if(!res.ok) throw new Error('manifest not found');
+          const data = await res.json();
+          songManifest = data.songs || [];
+          sel.innerHTML = '<option value="">— Select a song —</option>';
+          songManifest.forEach(s=>{
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.title + (s.artist ? ` — ${s.artist}` : '');
+            sel.appendChild(opt);
+          });
+          if(songManifest.length === 0) {
+            status.textContent = 'No songs in manifest.json';
+            return;
+          }
+          if(songManifest.length === 1) {
+            sel.value = songManifest[0].id;
+            await loadSelectedSong();
+          } else {
+            status.textContent = `${songManifest.length} songs available`;
+          }
+        } catch(e) {
+          sel.innerHTML = '<option value="">— No library —</option>';
+          status.textContent = 'Could not load songs/manifest.json (use a local server)';
+          status.style.color = '#ff8844';
+        }
+      }
+
+      async function loadSelectedSong() {
+        const id = document.getElementById('song-select').value;
+        const status = document.getElementById('song-status');
+        if(!id) {
+          status.textContent = 'Select a song to load chart + audio';
+          status.style.color = '#556';
+          updatePromptSong('');
+          return;
+        }
+        const song = songManifest.find(s=>s.id===id);
+        if(!song || !window.NeonRhythm) return;
+
+        status.textContent = 'Loading…';
+        status.style.color = '#8ab';
+        try {
+          const chartUrl = new URL(song.chart, SONGS_BASE).href;
+          const audioUrl = song.audio ? new URL(song.audio, SONGS_BASE).href : null;
+          const info = await window.NeonRhythm.loadSong(chartUrl, audioUrl);
+          setMode('chart');
+          const audioBit = info.duration != null ? ` · ${info.duration.toFixed(1)}s audio` : '';
+          status.textContent = `✓ ${info.title}${info.artist ? ' — '+info.artist : ''} · ${info.noteCount} notes${audioBit}`;
+          status.style.color = '#00ff88';
+          updateChartStatus(info);
+          updatePromptSong('♪ ' + info.title + (info.artist ? ' — ' + info.artist : ''));
+        } catch(e) {
+          status.textContent = '✗ ' + e.message;
+          status.style.color = '#ff4444';
+          updatePromptSong('');
+        }
+      }
 
       // ── Panel / mode logic ──────────────────
       let currentMode = 'random';
@@ -612,6 +745,13 @@
         if(window.NeonRhythm) window.NeonRhythm.setBPM(Number(val));
       }
 
+      function updateTiming(ms) {
+        const n = Number(ms);
+        const sec = n / 1000;
+        document.getElementById('timing-val').textContent =
+          (sec>=0?'+':'') + sec.toFixed(2) + 's';
+        if(window.NeonRhythm) window.NeonRhythm.setTimingLatency(sec);
+      }
       function loadChartFromInput() {
         const raw = document.getElementById('chart-input').value.trim();
         const status = document.getElementById('chart-status');
@@ -620,8 +760,12 @@
           if(!c.notes || !Array.isArray(c.notes)) throw new Error('Missing notes array');
           if(window.NeonRhythm) window.NeonRhythm.loadChart(c);
           const holds = c.notes.filter(n=>(n.duration||0)>0).length;
-          status.textContent = `✓ ${c.notes.length} notes (${holds} holds, ${c.bpm||'?'} BPM)`;
+          const info = { noteCount: c.notes.length, holds, bpm: c.bpm };
+          status.textContent = `✓ ${info.noteCount} notes (${holds} holds, ${c.bpm||'?'} BPM)`;
           status.style.color = '#00ff88';
+          updateChartStatus(info);
+          updatePromptSong(c.title ? '♪ ' + c.title : '');
+          document.getElementById('song-select').value = '';
         } catch(e) {
           status.textContent = '✗ Invalid JSON: ' + e.message;
           status.style.color = '#ff4444';
@@ -641,6 +785,8 @@
             if(window.NeonRhythm) window.NeonRhythm.loadAudio(buf);
             status.textContent = `✓ ${file.name} (${buf.duration.toFixed(1)}s)`;
             status.style.color = '#00ff88';
+            const c = window.NeonRhythm.getChart && window.NeonRhythm.getChart();
+            if(c && c.title) updatePromptSong('♪ ' + c.title);
           } catch(err) {
             status.textContent = '✗ Could not decode audio';
             status.style.color = '#ff4444';

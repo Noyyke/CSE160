@@ -1,0 +1,18 @@
+{
+  "songs": [
+    {
+      "id": "PUPA",
+      "title": "PUPA",
+      "artist": "Morimori Atsushi",
+      "chart": "PUPA/pupa.json",
+      "audio": "PUPA/pupa.mp3"
+    },
+    {
+      "id": "1_2_STEP",
+      "title": "1, 2, Step",
+      "artist": "Ciara",
+      "chart": "1_2_STEP/1_2_step.json",
+      "audio": "1_2_STEP/1_2_step.mp3"
+    }
+  ]
+}

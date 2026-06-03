@@ -69,11 +69,7 @@
     }
 
     /* ── Sidebar ── */
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
+    .sidebar { display: flex; flex-direction: column; gap: 14px; }
 
     .panel-box {
       background: rgba(0,0,30,0.7);
@@ -116,23 +112,15 @@
     input[type=range] { width:100%; accent-color:var(--cyan); }
 
     /* Lane buttons */
-    .lane-btns {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-    }
+    .lane-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
     .lane-btn {
       padding: 8px 4px;
       border-radius: 7px;
       border: 2px solid transparent;
       cursor: pointer;
       font-family: 'Orbitron', monospace;
-      font-size: 1em;
-      font-weight: 900;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
+      font-size: 1em; font-weight: 900;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
       transition: all .1s;
       background: rgba(0,0,40,0.7);
     }
@@ -141,14 +129,54 @@
     .lane-btn.d { color:var(--d); border-color:rgba(255,0,170,0.3); }
     .lane-btn.u { color:var(--u); border-color:rgba(0,255,136,0.3); }
     .lane-btn.r { color:var(--r); border-color:rgba(255,204,0,0.3); }
-    .lane-btn:hover, .lane-btn.selected {
-      filter: brightness(1.4);
-      transform: scale(1.05);
-    }
+    .lane-btn:hover, .lane-btn.selected { filter: brightness(1.4); transform: scale(1.05); }
     .lane-btn.l.selected { background:rgba(0,255,255,0.15); border-color:var(--l); box-shadow:0 0 10px rgba(0,255,255,0.3); }
     .lane-btn.d.selected { background:rgba(255,0,170,0.15); border-color:var(--d); box-shadow:0 0 10px rgba(255,0,170,0.3); }
     .lane-btn.u.selected { background:rgba(0,255,136,0.15); border-color:var(--u); box-shadow:0 0 10px rgba(0,255,136,0.3); }
     .lane-btn.r.selected { background:rgba(255,204,0,0.15); border-color:var(--r); box-shadow:0 0 10px rgba(255,204,0,0.3); }
+
+    /* Hold note toggle */
+    .hold-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #hold-toggle {
+      width: 34px; height: 18px;
+      background: rgba(0,0,40,0.8);
+      border: 1px solid rgba(0,255,255,0.3);
+      border-radius: 9px;
+      position: relative;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+      flex-shrink: 0;
+    }
+    #hold-toggle::after {
+      content:'';
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: #445;
+      transition: transform .15s, background .15s;
+    }
+    #hold-toggle.on {
+      background: rgba(0,255,255,0.18);
+      border-color: var(--cyan);
+    }
+    #hold-toggle.on::after {
+      transform: translateX(16px);
+      background: var(--cyan);
+    }
+    #hold-dur-wrap {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    #hold-dur-wrap.visible { display: flex; }
+    #hold-dur-wrap label.field-label { margin: 0; white-space: nowrap; }
+    #hold-dur-input { width: 70px; }
 
     /* Action buttons */
     .action-btn {
@@ -173,52 +201,33 @@
     #play-btn { font-size:1.2em; font-weight:bold; padding:10px; }
 
     /* ── Main area ── */
-    .main-area {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
+    .main-area { display: flex; flex-direction: column; gap: 12px; }
 
-    /* Waveform / playhead area */
+    /* Waveform */
     .audio-bar {
       background: rgba(0,0,30,0.7);
       border: 1px solid rgba(0,255,255,0.15);
       border-radius: 10px;
       padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      display: flex; flex-direction: column; gap: 8px;
     }
     .audio-bar h3 {
       font-family: 'Orbitron', monospace;
       font-size: 0.7em; letter-spacing:2px; color:var(--cyan); text-transform:uppercase;
     }
-    .audio-top {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    .audio-top { display: flex; align-items: center; gap: 10px; }
     #waveform-canvas {
-      flex: 1;
-      height: 60px;
-      border-radius: 6px;
-      background: rgba(0,0,20,0.8);
-      cursor: crosshair;
+      flex: 1; height: 60px; border-radius: 6px;
+      background: rgba(0,0,20,0.8); cursor: crosshair;
     }
     .time-display {
-      font-family: 'Orbitron', monospace;
-      font-size: 1.1em;
-      color: var(--cyan);
-      min-width: 80px;
-      text-align: right;
+      font-family: 'Orbitron', monospace; font-size: 1.1em; color: var(--cyan);
+      min-width: 80px; text-align: right;
     }
     #audio-upload-btn {
-      padding: 6px 14px;
-      border-radius: 6px;
-      border: 1px solid rgba(0,255,255,0.3);
-      background: rgba(0,0,40,0.8);
-      color: var(--cyan);
-      cursor: pointer;
+      padding: 6px 14px; border-radius: 6px;
+      border: 1px solid rgba(0,255,255,0.3); background: rgba(0,0,40,0.8);
+      color: var(--cyan); cursor: pointer;
       font-family:'Share Tech Mono',monospace; font-size:0.8em;
     }
     #audio-file { display:none; }
@@ -230,16 +239,10 @@
       border-radius: 10px;
       padding: 12px;
       flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      display: flex; flex-direction: column; gap: 8px;
       min-height: 320px;
     }
-    .timeline-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    .timeline-header { display: flex; justify-content: space-between; align-items: center; }
     .timeline-header h3 {
       font-family: 'Orbitron', monospace;
       font-size: 0.7em; letter-spacing:2px; color:var(--cyan); text-transform:uppercase;
@@ -248,23 +251,17 @@
     .zoom-row input { width:80px; }
 
     #timeline-canvas {
-      width: 100%;
-      border-radius: 6px;
-      background: rgba(0,0,15,0.9);
-      cursor: crosshair;
-      display: block;
+      width: 100%; border-radius: 6px;
+      background: rgba(0,0,15,0.9); cursor: crosshair; display: block;
     }
-    .tl-legend {
-      display: flex;
-      gap: 12px;
-      font-size: 0.7em;
-    }
-    .tl-legend span {
-      display:flex; align-items:center; gap:4px;
-    }
-    .tl-legend .dot {
-      width:10px; height:10px; border-radius:50%;
-      display:inline-block;
+    .tl-legend { display: flex; gap: 12px; font-size: 0.7em; flex-wrap: wrap; }
+    .tl-legend span { display:flex; align-items:center; gap:4px; }
+    .tl-legend .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+    .tl-legend .bar { width:18px; height:8px; border-radius:2px; display:inline-block; opacity:0.7; }
+
+    /* Drag-to-extend instructions */
+    .tl-tip {
+      font-size: 0.65em; color: #334; text-align: right; margin-left: auto;
     }
 
     /* ── Note list ── */
@@ -273,9 +270,7 @@
       border: 1px solid rgba(0,255,255,0.15);
       border-radius: 10px;
       padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+      display: flex; flex-direction: column; gap: 6px;
     }
     .note-list-header { display:flex; justify-content:space-between; align-items:center; }
     .note-list-header h3 {
@@ -283,27 +278,20 @@
       font-size: 0.7em; letter-spacing:2px; color:var(--cyan); text-transform:uppercase;
     }
     #note-count { font-size:0.72em; color:#556; }
-    #note-list {
-      max-height: 120px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
+    #note-list { max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
     #note-list::-webkit-scrollbar { width:4px; }
     #note-list::-webkit-scrollbar-track { background:rgba(0,0,30,0.5); }
     #note-list::-webkit-scrollbar-thumb { background:rgba(0,255,255,0.3); border-radius:2px; }
     .note-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 3px 6px;
-      border-radius: 4px;
-      font-size: 0.74em;
-      background: rgba(0,0,20,0.6);
+      display: flex; align-items: center; gap: 8px;
+      padding: 3px 6px; border-radius: 4px;
+      font-size: 0.74em; background: rgba(0,0,20,0.6);
+      cursor: pointer;
     }
+    .note-item:hover { background: rgba(0,0,40,0.8); }
     .note-item .ni-arrow { width:16px; text-align:center; }
     .note-item .ni-time  { color:#667; flex:1; }
+    .note-item .ni-hold  { font-size:0.8em; opacity:0.7; }
     .note-item .ni-del {
       cursor:pointer; color:#ff4444; opacity:0.6; font-size:0.9em;
       border:none; background:none; padding:0 2px;
@@ -316,25 +304,19 @@
       border: 1px solid rgba(0,255,255,0.15);
       border-radius: 10px;
       padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      display: flex; flex-direction: column; gap: 8px;
     }
     .export-area h3 {
       font-family: 'Orbitron', monospace;
       font-size: 0.7em; letter-spacing:2px; color:var(--cyan); text-transform:uppercase;
     }
     #export-output {
-      width: 100%;
-      min-height: 80px;
+      width: 100%; min-height: 80px;
       background: rgba(0,0,15,0.9);
       border: 1px solid rgba(0,255,255,0.15);
-      border-radius: 6px;
-      color: #8ab;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.75em;
-      padding: 8px;
-      resize: vertical;
+      border-radius: 6px; color: #8ab;
+      font-family: 'Share Tech Mono', monospace; font-size: 0.75em;
+      padding: 8px; resize: vertical;
     }
     .export-btns { display:flex; gap:8px; flex-wrap:wrap; }
   </style>
@@ -357,7 +339,6 @@
     <!-- Song settings -->
     <div class="panel-box">
       <h3>Song Settings</h3>
-
       <div>
         <label class="field-label">Song Title</label>
         <input type="text" id="song-title" placeholder="My Chart" value="My Chart">
@@ -390,6 +371,23 @@
         <button class="lane-btn r"          onclick="selectLane(3)" id="lb-3">►<span class="small">[ D ]  RIGHT</span></button>
       </div>
       <p style="font-size:0.65em;color:#445;text-align:center;">A/S/W/D to select &amp; stamp while playing</p>
+    </div>
+
+    <!-- Hold note settings -->
+    <div class="panel-box">
+      <h3>Note Type</h3>
+      <div class="hold-row">
+        <div id="hold-toggle" onclick="toggleHold()" title="Toggle hold note"></div>
+        <span style="font-size:0.82em;">Hold Note</span>
+        <span id="hold-label" style="font-size:0.68em;color:#445;margin-left:auto;">off</span>
+      </div>
+      <div id="hold-dur-wrap">
+        <label class="field-label">Duration (s)</label>
+        <input type="number" id="hold-dur-input" value="0.5" min="0.1" max="10" step="0.05">
+      </div>
+      <p style="font-size:0.64em;color:#334;line-height:1.4;">
+        Or drag the <strong style="color:#556">right edge</strong> of any note on the timeline to set its hold duration.
+      </p>
     </div>
 
     <!-- Playback -->
@@ -443,7 +441,8 @@
         <span><span class="dot" style="background:var(--d)"></span>Down (S)</span>
         <span><span class="dot" style="background:var(--u)"></span>Up (W)</span>
         <span><span class="dot" style="background:var(--r)"></span>Right (D)</span>
-        <span style="color:#445;margin-left:auto;font-size:0.85em;">Click timeline to seek &nbsp;|&nbsp; Right-click note to delete</span>
+        <span><span class="bar" style="background:var(--l)"></span>Hold</span>
+        <span class="tl-tip">Click = seek &nbsp;|&nbsp; Right-click note = delete &nbsp;|&nbsp; Drag right edge = set hold</span>
       </div>
     </div>
 
@@ -475,22 +474,48 @@
 // ═══════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════
-let notes      = [];          // { time:number, lane:0-3 }
+let notes      = [];          // { time, lane, duration }  duration=0 → tap
 let activeLane = 0;
-let snapDiv    = 4;           // beat subdivisions; 0=free
+let snapDiv    = 4;
 let bpm        = 128;
 let offset     = 0;
-let zoom       = 80;          // px per second
-let playhead   = 0;           // current time (seconds)
+let zoom       = 80;
+let playhead   = 0;
 let isPlaying  = false;
-let playStart  = null;        // Date.now() when play started
-let playOffset = 0;           // playhead at play start
-let duration   = 60;          // seconds (from audio or default 60)
-let scrollX    = 0;           // horizontal scroll offset in px
+let playStart  = null;
+let playOffset = 0;
+let duration   = 60;
+let scrollX    = 0;
 let audioBuffer= null;
 let audioCtx   = null;
 let audioSource= null;
 let audioSpeed = 1.0;
+
+// Hold note state
+let holdMode     = false;
+let holdDuration = 0.5;
+
+// Drag-to-resize state
+let dragNote  = null;   // index of note being drag-extended
+let dragStart = null;   // clientX at drag start
+let dragOrigD = 0;      // original duration at drag start
+
+// ═══════════════════════════════════════════
+//  Hold toggle
+// ═══════════════════════════════════════════
+function toggleHold() {
+  holdMode = !holdMode;
+  const tog = document.getElementById('hold-toggle');
+  const lbl = document.getElementById('hold-label');
+  const wrap = document.getElementById('hold-dur-wrap');
+  tog.classList.toggle('on', holdMode);
+  lbl.textContent = holdMode ? 'on' : 'off';
+  wrap.classList.toggle('visible', holdMode);
+}
+
+document.getElementById('hold-dur-input').addEventListener('input', e=>{
+  holdDuration = parseFloat(e.target.value) || 0.5;
+});
 
 // ═══════════════════════════════════════════
 //  Audio
@@ -511,8 +536,7 @@ function drawWaveform() {
   const ctx  = cvs.getContext('2d');
   ctx.clearRect(0,0,cvs.width,cvs.height);
   if(!audioBuffer) {
-    ctx.fillStyle='rgba(0,255,255,0.1)';
-    ctx.fillRect(0,0,cvs.width,cvs.height);
+    ctx.fillStyle='rgba(0,255,255,0.1)'; ctx.fillRect(0,0,cvs.width,cvs.height);
     ctx.fillStyle='#334'; ctx.font='12px monospace';
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText('no audio', cvs.width/2, cvs.height/2);
@@ -521,39 +545,28 @@ function drawWaveform() {
   const data  = audioBuffer.getChannelData(0);
   const step  = Math.ceil(data.length / cvs.width);
   const amp   = cvs.height/2;
-  ctx.fillStyle='#03001a';
-  ctx.fillRect(0,0,cvs.width,cvs.height);
-  ctx.beginPath();
-  ctx.strokeStyle='#00ffff';
-  ctx.lineWidth=1;
+  ctx.fillStyle='#03001a'; ctx.fillRect(0,0,cvs.width,cvs.height);
+  ctx.beginPath(); ctx.strokeStyle='#00ffff'; ctx.lineWidth=1;
   for(let x=0;x<cvs.width;x++) {
     let max=0;
     for(let s=x*step; s<(x+1)*step && s<data.length; s++) max=Math.max(max,Math.abs(data[s]));
-    ctx.moveTo(x, amp-max*amp);
-    ctx.lineTo(x, amp+max*amp);
+    ctx.moveTo(x, amp-max*amp); ctx.lineTo(x, amp+max*amp);
   }
   ctx.stroke();
 }
 
-// Click waveform to seek
 document.getElementById('waveform-canvas').addEventListener('click', e=>{
   const r=e.currentTarget.getBoundingClientRect();
-  const frac=(e.clientX-r.left)/r.width;
-  seek(frac*duration);
+  seek((e.clientX-r.left)/r.width*duration);
 });
 
 // ═══════════════════════════════════════════
 //  Playback
 // ═══════════════════════════════════════════
-function togglePlay() {
-  isPlaying ? pause() : play();
-}
+function togglePlay() { isPlaying ? pause() : play(); }
 function play() {
-  isPlaying=true;
-  playOffset=playhead;
-  playStart=Date.now();
+  isPlaying=true; playOffset=playhead; playStart=Date.now();
   document.getElementById('play-btn').textContent='⏸ PAUSE';
-
   if(audioBuffer && audioCtx) {
     if(audioCtx.state==='suspended') audioCtx.resume();
     if(audioSource) { try{audioSource.stop();}catch(e){} }
@@ -561,8 +574,7 @@ function play() {
     audioSource.buffer = audioBuffer;
     audioSource.playbackRate.value = audioSpeed;
     audioSource.connect(audioCtx.destination);
-    const startAt = Math.max(0, playhead - offset);
-    audioSource.start(0, startAt);
+    audioSource.start(0, Math.max(0, playhead - offset));
     audioSource.onended = ()=>{ if(isPlaying) pause(); };
   }
   requestAnimationFrame(tick);
@@ -587,7 +599,6 @@ function tick() {
   playhead=playOffset+elapsed;
   if(playhead>=duration) { playhead=duration; pause(); }
   document.getElementById('time-display').textContent = playhead.toFixed(3)+'s';
-  // Auto-scroll timeline to follow playhead
   const tlCvs=document.getElementById('timeline-canvas');
   const phX=playhead*zoom-scrollX;
   if(phX>tlCvs.clientWidth*0.75) scrollX=playhead*zoom-tlCvs.clientWidth*0.5;
@@ -601,18 +612,18 @@ function tick() {
 // ═══════════════════════════════════════════
 const LANE_COLORS=['#00ffff','#ff00aa','#00ff88','#ffcc00'];
 const LANE_LABELS=['◄','▼','▲','►'];
-const LANE_Y=[30, 70, 110, 150];   // y positions in timeline canvas
+const LANE_Y=[30, 70, 110, 150];
 const NOTE_R=10;
+
+function timeToX(t)  { return t*zoom - scrollX; }
+function xToTime(x)  { return (x+scrollX)/zoom; }
 
 function drawTimeline() {
   const cvs=document.getElementById('timeline-canvas');
-  // Resize to container
   cvs.width=cvs.clientWidth||700;
   const ctx=cvs.getContext('2d');
   const W=cvs.width, H=cvs.height;
   ctx.clearRect(0,0,W,H);
-
-  // Background
   ctx.fillStyle='#03001a'; ctx.fillRect(0,0,W,H);
 
   // Beat grid
@@ -630,14 +641,11 @@ function drawTimeline() {
       ctx.font='9px Share Tech Mono';
       ctx.fillText(b/4+1, x+3, 10);
     }
-
-    // Sub-beat lines
     if(snapDiv>4) {
       const sub=beatSec/snapDiv*4;
       for(let s=1;s<snapDiv/4;s++) {
         const sx=x+s*sub*zoom;
-        ctx.strokeStyle='rgba(0,255,255,0.04)';
-        ctx.lineWidth=0.5;
+        ctx.strokeStyle='rgba(0,255,255,0.04)'; ctx.lineWidth=0.5;
         ctx.beginPath(); ctx.moveTo(sx,0); ctx.lineTo(sx,H); ctx.stroke();
       }
     }
@@ -648,91 +656,176 @@ function drawTimeline() {
     const y=LANE_Y[i];
     ctx.strokeStyle=col+'44'; ctx.lineWidth=0.5;
     ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
-    // Lane label
     ctx.fillStyle=col; ctx.font='bold 11px Orbitron,monospace';
     ctx.textAlign='left'; ctx.textBaseline='middle';
     ctx.fillText(LANE_LABELS[i], 4, y);
   });
 
-  // Notes
+  // Notes (hold bars drawn first, then heads on top)
   notes.forEach((n,idx)=>{
-    const x=n.time*zoom-scrollX;
-    if(x<-NOTE_R||x>W+NOTE_R) return;
+    const x=timeToX(n.time);
     const y=LANE_Y[n.lane];
     const col=LANE_COLORS[n.lane];
-    // Glow
+    const dur=n.duration||0;
+
+    // Hold tail bar
+    if(dur>0) {
+      const barW=dur*zoom;
+      const x1=x+NOTE_R, x2=x+NOTE_R+barW;
+      if(x2>0 && x1<W) {
+        // Background bar
+        ctx.save();
+        ctx.fillStyle=col+'55';
+        ctx.strokeStyle=col+'99';
+        ctx.lineWidth=1;
+        const bh=14;
+        const bx=Math.max(x1,0), bx2=Math.min(x2,W);
+        ctx.fillRect(bx, y-bh/2, bx2-bx, bh);
+        ctx.strokeRect(bx, y-bh/2, bx2-bx, bh);
+
+        // Drag handle at right edge
+        if(x2<W && x2>0) {
+          ctx.fillStyle=col;
+          ctx.beginPath();
+          ctx.roundRect ? ctx.roundRect(x2-4, y-bh/2, 8, bh, 3) : ctx.rect(x2-4, y-bh/2, 8, bh);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    // Note head (circle + glow)
+    if(x<-NOTE_R||x>W+NOTE_R) return;
     ctx.save();
     ctx.shadowColor=col; ctx.shadowBlur=12;
     ctx.beginPath(); ctx.arc(x,y,NOTE_R,0,Math.PI*2);
     ctx.fillStyle=col+'cc'; ctx.fill();
     ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
     ctx.restore();
-    // Arrow label
     ctx.fillStyle='#000'; ctx.font='bold 9px Orbitron,monospace';
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(LANE_LABELS[n.lane], x, y);
+    // Hold indicator dot
+    if(dur>0) {
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y-NOTE_R-3,2,0,Math.PI*2); ctx.fill();
+    }
   });
 
   // Playhead
-  const phX=playhead*zoom-scrollX;
+  const phX=timeToX(playhead);
   ctx.save();
   ctx.shadowColor='#fff'; ctx.shadowBlur=8;
   ctx.strokeStyle='#ffffff'; ctx.lineWidth=2;
   ctx.beginPath(); ctx.moveTo(phX,0); ctx.lineTo(phX,H); ctx.stroke();
-  // Playhead triangle
   ctx.fillStyle='#ffffff';
   ctx.beginPath(); ctx.moveTo(phX-6,0); ctx.lineTo(phX+6,0); ctx.lineTo(phX,10); ctx.closePath(); ctx.fill();
   ctx.restore();
 }
 
-// ── Timeline interaction ──────────────────
+// ═══════════════════════════════════════════
+//  Timeline Interaction
+// ═══════════════════════════════════════════
 const tlCvs=document.getElementById('timeline-canvas');
-tlCvs.addEventListener('click', e=>{
+
+// Hit-test helper: find note near (mx,my), also returns dragHandleHit
+function hitTestNote(mx, my) {
+  let headIdx=-1, headDist=Infinity;
+  let handleIdx=-1, handleDist=Infinity;
+
+  notes.forEach((n,i)=>{
+    const x=timeToX(n.time);
+    const y=LANE_Y[n.lane];
+    const dur=n.duration||0;
+
+    // Head circle
+    const d=Math.hypot(mx-x, my-y);
+    if(d<NOTE_R+4 && d<headDist) { headDist=d; headIdx=i; }
+
+    // Drag handle (right edge of hold bar)
+    if(dur>0) {
+      const hx=x+NOTE_R+dur*zoom;
+      const bh=14;
+      if(Math.abs(mx-hx)<8 && Math.abs(my-y)<bh) { handleIdx=i; handleDist=Math.abs(mx-hx); }
+    }
+  });
+  return { headIdx, handleIdx };
+}
+
+// Pointer events for drag-to-resize
+tlCvs.addEventListener('mousedown', e=>{
   const r=tlCvs.getBoundingClientRect();
-  const mx=e.clientX-r.left;
-  const my=e.clientY-r.top;
-  const t=(mx+scrollX)/zoom;
-  // Seek to clicked time
-  seek(t);
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  const {handleIdx}=hitTestNote(mx,my);
+  if(handleIdx>=0) {
+    e.preventDefault();
+    dragNote=handleIdx;
+    dragStart=e.clientX;
+    dragOrigD=notes[handleIdx].duration||0;
+  }
+});
+
+window.addEventListener('mousemove', e=>{
+  if(dragNote===null) return;
+  const delta=(e.clientX-dragStart)/zoom;
+  const newDur=Math.max(0.05, dragOrigD+delta);
+  notes[dragNote].duration=parseFloat(newDur.toFixed(3));
+  refreshNoteList(); drawTimeline();
+});
+
+window.addEventListener('mouseup', ()=>{
+  if(dragNote!==null) { dragNote=null; dragStart=null; dragOrigD=0; }
+});
+
+// Cursor change on hover over handle
+tlCvs.addEventListener('mousemove', e=>{
+  if(dragNote!==null) return;
+  const r=tlCvs.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  const {handleIdx}=hitTestNote(mx,my);
+  tlCvs.style.cursor=handleIdx>=0?'ew-resize':'crosshair';
+});
+
+tlCvs.addEventListener('click', e=>{
+  if(dragStart!==null && Math.abs(e.clientX-dragStart)>4) return; // was a drag
+  const r=tlCvs.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  const {handleIdx}=hitTestNote(mx,my);
+  if(handleIdx>=0) return; // don't seek when clicking handle
+  seek(xToTime(mx));
 });
 
 tlCvs.addEventListener('contextmenu', e=>{
   e.preventDefault();
   const r=tlCvs.getBoundingClientRect();
-  const mx=e.clientX-r.left;
-  const my=e.clientY-r.top;
-  const t=(mx+scrollX)/zoom;
-  // Find nearest note within 12px
-  let best=null; let bestD=12/zoom;
-  notes.forEach((n,i)=>{
-    const d=Math.abs(n.time-t);
-    if(d<bestD){ bestD=d; best=i; }
-  });
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  const t=xToTime(mx);
+  // Find nearest note head
+  let best=null; let bestD=14/zoom;
+  notes.forEach((n,i)=>{ const d=Math.abs(n.time-t); if(d<bestD){ bestD=d; best=i; } });
   if(best!==null){ notes.splice(best,1); refreshNoteList(); drawTimeline(); }
 });
 
-// Scroll timeline horizontally
 tlCvs.addEventListener('wheel', e=>{
   e.preventDefault();
   scrollX=Math.max(0, scrollX+e.deltaY*0.8);
   drawTimeline();
 }, {passive:false});
 
-// ── Stamp note at playhead ────────────────
+// ═══════════════════════════════════════════
+//  Stamp note
+// ═══════════════════════════════════════════
 function stampNote(lane) {
   let t=playhead;
   if(snapDiv>0) {
-    const beatSec=60/bpm;
-    const subSec=beatSec/(snapDiv/4);
+    const subSec=(60/bpm)/(snapDiv/4);
     t=Math.round(t/subSec)*subSec;
   }
-  // Deduplicate within 20ms of same lane
+  const dur = holdMode ? holdDuration : 0;
   const dup=notes.some(n=>n.lane===lane&&Math.abs(n.time-t)<0.02);
   if(!dup) {
-    notes.push({time:t, lane});
+    notes.push({time:t, lane, duration:dur});
     notes.sort((a,b)=>a.time-b.time);
-    refreshNoteList();
-    drawTimeline();
+    refreshNoteList(); drawTimeline();
   }
 }
 
@@ -753,7 +846,6 @@ function clearAllNotes() {
   if(confirm('Clear all notes?')){ notes=[]; refreshNoteList(); drawTimeline(); }
 }
 
-// Keyboard shortcuts
 document.addEventListener('keydown', e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
   if(e.code==='Space'){ e.preventDefault(); togglePlay(); return; }
@@ -761,12 +853,12 @@ document.addEventListener('keydown', e=>{
   if(e.code==='KeyS'){ selectLane(1); stampNote(1); }
   if(e.code==='KeyW'){ e.preventDefault(); selectLane(2); stampNote(2); }
   if(e.code==='KeyD'){ selectLane(3); stampNote(3); }
+  if(e.code==='KeyH'){ toggleHold(); }    // H = toggle hold
   if(e.code==='ArrowLeft')  seek(playhead-60/bpm);
   if(e.code==='ArrowRight') seek(playhead+60/bpm);
   if(e.code==='Home') jumpToStart();
 });
 
-// BPM / offset
 document.getElementById('bpm-input').addEventListener('input', e=>{ bpm=parseFloat(e.target.value)||128; drawTimeline(); });
 document.getElementById('offset-input').addEventListener('input', e=>{ offset=parseFloat(e.target.value)||0; });
 document.getElementById('zoom-slider').addEventListener('input', e=>{
@@ -790,12 +882,14 @@ function refreshNoteList() {
   [...notes].reverse().forEach((n,ri)=>{
     const realIdx=notes.length-1-ri;
     const col=LANE_COLORS[n.lane];
+    const dur=n.duration||0;
     const div=document.createElement('div');
     div.className='note-item';
     div.innerHTML=`
       <span class="ni-arrow" style="color:${col}">${LANE_LABELS[n.lane]}</span>
       <span class="ni-time">${n.time.toFixed(3)}s &nbsp; beat ${(n.time/(60/bpm)+1).toFixed(2)}</span>
-      <button class="ni-del" onclick="deleteNote(${realIdx})">✕</button>
+      ${dur>0?`<span class="ni-hold" style="color:${col}">hold ${dur.toFixed(2)}s</span>`:''}
+      <button class="ni-del" onclick="event.stopPropagation();deleteNote(${realIdx})">✕</button>
     `;
     div.addEventListener('click', ()=>seek(n.time));
     list.appendChild(div);
@@ -808,10 +902,14 @@ function deleteNote(i){ notes.splice(i,1); refreshNoteList(); drawTimeline(); }
 // ═══════════════════════════════════════════
 function exportChart() {
   const chart={
-    title:   document.getElementById('song-title').value,
-    bpm:     parseFloat(document.getElementById('bpm-input').value)||128,
-    offset:  parseFloat(document.getElementById('offset-input').value)||0,
-    notes:   notes.map(n=>({time:parseFloat(n.time.toFixed(4)), lane:n.lane}))
+    title:  document.getElementById('song-title').value,
+    bpm:    parseFloat(document.getElementById('bpm-input').value)||128,
+    offset: parseFloat(document.getElementById('offset-input').value)||0,
+    notes:  notes.map(n=>({
+      time:     parseFloat(n.time.toFixed(4)),
+      lane:     n.lane,
+      duration: parseFloat((n.duration||0).toFixed(4))
+    }))
   };
   document.getElementById('export-output').value=JSON.stringify(chart,null,2);
 }
@@ -833,13 +931,14 @@ function importChart() {
   const raw=document.getElementById('export-output').value.trim();
   try {
     const c=JSON.parse(raw);
-    notes=c.notes||[];
+    notes=(c.notes||[]).map(n=>({time:n.time, lane:n.lane, duration:n.duration||0}));
     document.getElementById('bpm-input').value=c.bpm||128;
     document.getElementById('offset-input').value=c.offset||0;
     document.getElementById('song-title').value=c.title||'';
     bpm=c.bpm||128; offset=c.offset||0;
     refreshNoteList(); drawTimeline();
-    alert('Chart imported! '+notes.length+' notes.');
+    const holds=notes.filter(n=>n.duration>0).length;
+    alert(`Chart imported! ${notes.length} notes (${holds} holds).`);
   } catch(e){ alert('Invalid JSON: '+e.message); }
 }
 
@@ -847,10 +946,7 @@ function importChart() {
 //  Init
 // ═══════════════════════════════════════════
 window.addEventListener('load',()=>{
-  drawWaveform();
-  drawTimeline();
-  setSnap(4);
-  // Resize observer for timeline canvas
+  drawWaveform(); drawTimeline(); setSnap(4);
   new ResizeObserver(()=>drawTimeline()).observe(tlCvs);
 });
 window.addEventListener('resize',()=>{ drawWaveform(); drawTimeline(); });
