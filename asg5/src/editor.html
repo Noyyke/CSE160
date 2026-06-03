@@ -9,365 +9,224 @@
   <style>
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
     :root {
-      --cyan:   #00ffff;
-      --pink:   #ff00aa;
-      --green:  #00ff88;
-      --yellow: #ffcc00;
-      --l:      #00ffff;
-      --d:      #ff00aa;
-      --u:      #00ff88;
-      --r:      #ffcc00;
+      --cyan:#00ffff; --pink:#ff00aa; --green:#00ff88; --yellow:#ffcc00;
+      --l:#00ffff; --d:#ff00aa; --u:#00ff88; --r:#ffcc00;
     }
-
     body {
-      background: #04000f;
-      color: #ccc;
-      font-family: 'Share Tech Mono', monospace;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px 16px 40px;
-      min-height: 100vh;
-      overflow-x: hidden;
+      background:#04000f; color:#ccc;
+      font-family:'Share Tech Mono',monospace;
+      display:flex; flex-direction:column; align-items:center;
+      padding:20px 16px 40px; min-height:100vh; overflow-x:hidden;
     }
-
-    /* ── Header ── */
     header {
-      width: 100%;
-      max-width: 1000px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      padding-bottom: 10px;
-      border-bottom: 1px solid rgba(0,255,255,0.2);
-      margin-bottom: 18px;
+      width:100%; max-width:1000px;
+      display:flex; justify-content:space-between; align-items:flex-end;
+      padding-bottom:10px; border-bottom:1px solid rgba(0,255,255,0.2); margin-bottom:18px;
     }
     header h1 {
-      font-family: 'Orbitron', monospace;
-      font-size: 1.6em;
-      font-weight: 900;
-      letter-spacing: 3px;
-      background: linear-gradient(90deg, var(--cyan), var(--pink));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      font-family:'Orbitron',monospace; font-size:1.6em; font-weight:900; letter-spacing:3px;
+      background:linear-gradient(90deg,var(--cyan),var(--pink));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
     }
     header .back {
-      color: var(--cyan); font-size: 0.8em; text-decoration:none;
-      border: 1px solid rgba(0,255,255,0.3); padding: 5px 12px;
-      border-radius: 6px; transition: all .15s;
+      color:var(--cyan); font-size:0.8em; text-decoration:none;
+      border:1px solid rgba(0,255,255,0.3); padding:5px 12px; border-radius:6px; transition:all .15s;
     }
-    header .back:hover { background: rgba(0,255,255,0.1); }
-
-    /* ── Main layout ── */
+    header .back:hover{background:rgba(0,255,255,0.1);}
     .editor-layout {
-      width: 100%;
-      max-width: 1000px;
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 16px;
+      width:100%; max-width:1000px;
+      display:grid; grid-template-columns:220px 1fr; gap:16px;
     }
-
-    /* ── Sidebar ── */
-    .sidebar { display: flex; flex-direction: column; gap: 14px; }
-
+    .sidebar{display:flex;flex-direction:column;gap:14px;}
     .panel-box {
-      background: rgba(0,0,30,0.7);
-      border: 1px solid rgba(0,255,255,0.15);
-      border-radius: 10px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      background:rgba(0,0,30,0.7); border:1px solid rgba(0,255,255,0.15);
+      border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:10px;
     }
     .panel-box h3 {
-      font-family: 'Orbitron', monospace;
-      font-size: 0.7em;
-      letter-spacing: 2px;
-      color: var(--cyan);
-      text-transform: uppercase;
-      padding-bottom: 6px;
-      border-bottom: 1px solid rgba(0,255,255,0.1);
+      font-family:'Orbitron',monospace; font-size:0.7em; letter-spacing:2px; color:var(--cyan);
+      text-transform:uppercase; padding-bottom:6px; border-bottom:1px solid rgba(0,255,255,0.1);
     }
-
     label.field-label {
-      font-size: 0.68em;
-      color: #667;
-      display: block;
-      margin-bottom: 3px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
+      font-size:0.68em; color:#667; display:block; margin-bottom:3px;
+      text-transform:uppercase; letter-spacing:1px;
     }
-    input[type=text], input[type=number] {
-      width: 100%;
-      background: rgba(0,0,20,0.8);
-      border: 1px solid rgba(0,255,255,0.2);
-      border-radius: 5px;
-      color: var(--cyan);
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.85em;
-      padding: 5px 8px;
+    input[type=text],input[type=number] {
+      width:100%; background:rgba(0,0,20,0.8); border:1px solid rgba(0,255,255,0.2);
+      border-radius:5px; color:var(--cyan); font-family:'Share Tech Mono',monospace;
+      font-size:0.85em; padding:5px 8px;
     }
-    input:focus { outline: none; border-color: var(--cyan); }
-    input[type=range] { width:100%; accent-color:var(--cyan); }
-
-    /* Lane buttons */
-    .lane-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    input:focus{outline:none;border-color:var(--cyan);}
+    input[type=range]{width:100%;accent-color:var(--cyan);}
+    .lane-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
     .lane-btn {
-      padding: 8px 4px;
-      border-radius: 7px;
-      border: 2px solid transparent;
-      cursor: pointer;
-      font-family: 'Orbitron', monospace;
-      font-size: 1em; font-weight: 900;
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
-      transition: all .1s;
-      background: rgba(0,0,40,0.7);
+      padding:8px 4px; border-radius:7px; border:2px solid transparent;
+      cursor:pointer; font-family:'Orbitron',monospace; font-size:1em; font-weight:900;
+      display:flex; flex-direction:column; align-items:center; gap:2px;
+      transition:all .1s; background:rgba(0,0,40,0.7);
     }
-    .lane-btn span.small { font-size:0.55em; font-weight:400; font-family:'Share Tech Mono',monospace; opacity:0.7; }
-    .lane-btn.l { color:var(--l); border-color:rgba(0,255,255,0.3); }
-    .lane-btn.d { color:var(--d); border-color:rgba(255,0,170,0.3); }
-    .lane-btn.u { color:var(--u); border-color:rgba(0,255,136,0.3); }
-    .lane-btn.r { color:var(--r); border-color:rgba(255,204,0,0.3); }
-    .lane-btn:hover, .lane-btn.selected { filter: brightness(1.4); transform: scale(1.05); }
-    .lane-btn.l.selected { background:rgba(0,255,255,0.15); border-color:var(--l); box-shadow:0 0 10px rgba(0,255,255,0.3); }
-    .lane-btn.d.selected { background:rgba(255,0,170,0.15); border-color:var(--d); box-shadow:0 0 10px rgba(255,0,170,0.3); }
-    .lane-btn.u.selected { background:rgba(0,255,136,0.15); border-color:var(--u); box-shadow:0 0 10px rgba(0,255,136,0.3); }
-    .lane-btn.r.selected { background:rgba(255,204,0,0.15); border-color:var(--r); box-shadow:0 0 10px rgba(255,204,0,0.3); }
-
-    /* Hold note toggle */
-    .hold-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+    .lane-btn span.small{font-size:0.55em;font-weight:400;font-family:'Share Tech Mono',monospace;opacity:0.7;}
+    .lane-btn.l{color:var(--l);border-color:rgba(0,255,255,0.3);}
+    .lane-btn.d{color:var(--d);border-color:rgba(255,0,170,0.3);}
+    .lane-btn.u{color:var(--u);border-color:rgba(0,255,136,0.3);}
+    .lane-btn.r{color:var(--r);border-color:rgba(255,204,0,0.3);}
+    .lane-btn:hover,.lane-btn.selected{filter:brightness(1.4);transform:scale(1.05);}
+    .lane-btn.l.selected{background:rgba(0,255,255,0.15);border-color:var(--l);box-shadow:0 0 10px rgba(0,255,255,0.3);}
+    .lane-btn.d.selected{background:rgba(255,0,170,0.15);border-color:var(--d);box-shadow:0 0 10px rgba(255,0,170,0.3);}
+    .lane-btn.u.selected{background:rgba(0,255,136,0.15);border-color:var(--u);box-shadow:0 0 10px rgba(0,255,136,0.3);}
+    .lane-btn.r.selected{background:rgba(255,204,0,0.15);border-color:var(--r);box-shadow:0 0 10px rgba(255,204,0,0.3);}
+    .hold-row{display:flex;align-items:center;gap:8px;}
     #hold-toggle {
-      width: 34px; height: 18px;
-      background: rgba(0,0,40,0.8);
-      border: 1px solid rgba(0,255,255,0.3);
-      border-radius: 9px;
-      position: relative;
-      cursor: pointer;
-      transition: background .15s, border-color .15s;
-      flex-shrink: 0;
+      width:34px;height:18px;background:rgba(0,0,40,0.8);
+      border:1px solid rgba(0,255,255,0.3);border-radius:9px;
+      position:relative;cursor:pointer;transition:background .15s,border-color .15s;flex-shrink:0;
     }
     #hold-toggle::after {
-      content:'';
-      position: absolute;
-      top: 2px; left: 2px;
-      width: 12px; height: 12px;
-      border-radius: 50%;
-      background: #445;
-      transition: transform .15s, background .15s;
+      content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;
+      border-radius:50%;background:#445;transition:transform .15s,background .15s;
     }
-    #hold-toggle.on {
-      background: rgba(0,255,255,0.18);
-      border-color: var(--cyan);
-    }
-    #hold-toggle.on::after {
-      transform: translateX(16px);
-      background: var(--cyan);
-    }
-    #hold-dur-wrap {
-      display: none;
-      align-items: center;
-      gap: 6px;
-      margin-top: 4px;
-    }
-    #hold-dur-wrap.visible { display: flex; }
-    #hold-dur-wrap label.field-label { margin: 0; white-space: nowrap; }
-    #hold-dur-input { width: 70px; }
-
-    /* Action buttons */
+    #hold-toggle.on{background:rgba(0,255,255,0.18);border-color:var(--cyan);}
+    #hold-toggle.on::after{transform:translateX(16px);background:var(--cyan);}
+    #hold-dur-wrap{display:none;align-items:center;gap:6px;margin-top:4px;}
+    #hold-dur-wrap.visible{display:flex;}
+    #hold-dur-input{width:70px;}
     .action-btn {
-      padding: 8px;
-      border-radius: 7px;
-      border: 1px solid rgba(0,255,255,0.3);
-      background: rgba(0,0,40,0.8);
-      color: var(--cyan);
-      cursor: pointer;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.85em;
-      text-align: center;
-      transition: all .15s;
-      width: 100%;
+      padding:8px; border-radius:7px; border:1px solid rgba(0,255,255,0.3);
+      background:rgba(0,0,40,0.8); color:var(--cyan); cursor:pointer;
+      font-family:'Share Tech Mono',monospace; font-size:0.85em; text-align:center;
+      transition:all .15s; width:100%;
     }
-    .action-btn:hover { background:rgba(0,255,255,0.1); box-shadow:0 0 10px rgba(0,255,255,0.2); }
-    .action-btn.danger { color:#ff4444; border-color:rgba(255,68,68,0.4); }
-    .action-btn.danger:hover { background:rgba(255,68,68,0.1); }
-    .action-btn.green  { color:var(--green); border-color:rgba(0,255,136,0.4); }
-    .action-btn.green:hover { background:rgba(0,255,136,0.1); }
-    .action-btn.pink   { color:var(--pink); border-color:rgba(255,0,170,0.4); }
-    .action-btn.pink:hover { background:rgba(255,0,170,0.1); }
-
-    #play-btn { font-size:1.2em; font-weight:bold; padding:10px; }
-
-    /* ── Main area ── */
-    .main-area { display: flex; flex-direction: column; gap: 12px; }
-
-    /* Waveform */
+    .action-btn:hover{background:rgba(0,255,255,0.1);box-shadow:0 0 10px rgba(0,255,255,0.2);}
+    .action-btn.danger{color:#ff4444;border-color:rgba(255,68,68,0.4);}
+    .action-btn.danger:hover{background:rgba(255,68,68,0.1);}
+    .action-btn.green{color:var(--green);border-color:rgba(0,255,136,0.4);}
+    .action-btn.green:hover{background:rgba(0,255,136,0.1);}
+    .action-btn.pink{color:var(--pink);border-color:rgba(255,0,170,0.4);}
+    .action-btn.pink:hover{background:rgba(255,0,170,0.1);}
+    .action-btn.yellow{color:var(--yellow);border-color:rgba(255,204,0,0.4);}
+    .action-btn.yellow:hover{background:rgba(255,204,0,0.1);}
+    .action-btn:disabled{opacity:0.35;cursor:not-allowed;}
+    #play-btn{font-size:1.2em;font-weight:bold;padding:10px;}
+    .main-area{display:flex;flex-direction:column;gap:12px;}
     .audio-bar {
-      background: rgba(0,0,30,0.7);
-      border: 1px solid rgba(0,255,255,0.15);
-      border-radius: 10px;
-      padding: 12px;
-      display: flex; flex-direction: column; gap: 8px;
+      background:rgba(0,0,30,0.7);border:1px solid rgba(0,255,255,0.15);
+      border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;
     }
-    .audio-bar h3 {
-      font-family: 'Orbitron', monospace;
-      font-size: 0.7em; letter-spacing:2px; color:var(--cyan); text-transform:uppercase;
-    }
-    .audio-top { display: flex; align-items: center; gap: 10px; }
-    #waveform-canvas {
-      flex: 1; height: 60px; border-radius: 6px;
-      background: rgba(0,0,20,0.8); cursor: crosshair;
-    }
-    .time-display {
-      font-family: 'Orbitron', monospace; font-size: 1.1em; color: var(--cyan);
-      min-width: 80px; text-align: right;
-    }
+    .audio-bar h3{font-family:'Orbitron',monospace;font-size:0.7em;letter-spacing:2px;color:var(--cyan);text-transform:uppercase;}
+    .audio-top{display:flex;align-items:center;gap:10px;}
+    #waveform-canvas{flex:1;height:60px;border-radius:6px;background:rgba(0,0,20,0.8);cursor:crosshair;}
+    .time-display{font-family:'Orbitron',monospace;font-size:1.1em;color:var(--cyan);min-width:80px;text-align:right;}
     #audio-upload-btn {
-      padding: 6px 14px; border-radius: 6px;
-      border: 1px solid rgba(0,255,255,0.3); background: rgba(0,0,40,0.8);
-      color: var(--cyan); cursor: pointer;
-      font-family:'Share Tech Mono',monospace; font-size:0.8em;
+      padding:6px 14px;border-radius:6px;border:1px solid rgba(0,255,255,0.3);
+      background:rgba(0,0,40,0.8);color:var(--cyan);cursor:pointer;
+      font-family:'Share Tech Mono',monospace;font-size:0.8em;
     }
-    #audio-file { display:none; }
+    #audio-file{display:none;}
 
     /* ── Timeline ── */
     .timeline-container {
-      background: rgba(0,0,30,0.7);
-      border: 1px solid rgba(0,255,255,0.15);
-      border-radius: 10px;
-      padding: 12px;
-      flex: 1;
-      display: flex; flex-direction: column; gap: 8px;
-      min-height: 320px;
+      background:rgba(0,0,30,0.7);border:1px solid rgba(0,255,255,0.15);
+      border-radius:10px;padding:12px;flex:1;
+      display:flex;flex-direction:column;gap:8px;min-height:320px;
     }
-    .timeline-header { display: flex; justify-content: space-between; align-items: center; }
-    .timeline-header h3 {
-      font-family: 'Orbitron', monospace;
-      font-size: 0.7em; letter-spacing:2px; color:var(--cyan); text-transform:uppercase;
-    }
-    .zoom-row { display:flex; align-items:center; gap:6px; font-size:0.75em; color:#556; }
-    .zoom-row input { width:80px; }
+    .timeline-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+    .timeline-header h3{font-family:'Orbitron',monospace;font-size:0.7em;letter-spacing:2px;color:var(--cyan);text-transform:uppercase;}
+    .zoom-row{display:flex;align-items:center;gap:6px;font-size:0.75em;color:#556;}
+    .zoom-row input{width:80px;}
 
-    #timeline-canvas {
-      width: 100%; border-radius: 6px;
-      background: rgba(0,0,15,0.9); cursor: crosshair; display: block;
+    /* ── Tool mode bar ── */
+    .tool-bar {
+      display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+      padding:6px 8px;background:rgba(0,0,20,0.6);border-radius:7px;
+      border:1px solid rgba(0,255,255,0.1);
     }
-    .tl-legend { display: flex; gap: 12px; font-size: 0.7em; flex-wrap: wrap; }
-    .tl-legend span { display:flex; align-items:center; gap:4px; }
-    .tl-legend .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
-    .tl-legend .bar { width:18px; height:8px; border-radius:2px; display:inline-block; opacity:0.7; }
-    .tl-tip {
-      font-size: 0.65em; color: #334; text-align: right; margin-left: auto;
+    .tool-bar span{font-size:0.65em;color:#445;margin-right:4px;}
+    .tool-btn {
+      padding:4px 12px;border-radius:5px;border:1px solid rgba(0,255,255,0.25);
+      background:rgba(0,0,30,0.8);color:#778;cursor:pointer;
+      font-family:'Share Tech Mono',monospace;font-size:0.78em;transition:all .15s;
     }
+    .tool-btn:hover{color:var(--cyan);border-color:var(--cyan);}
+    .tool-btn.active{color:var(--cyan);border-color:var(--cyan);background:rgba(0,255,255,0.1);box-shadow:0 0 8px rgba(0,255,255,0.2);}
+    .tool-sep{width:1px;height:18px;background:rgba(0,255,255,0.1);margin:0 4px;}
+    .edit-btn {
+      padding:4px 10px;border-radius:5px;border:1px solid rgba(0,255,255,0.2);
+      background:rgba(0,0,30,0.8);color:#667;cursor:pointer;
+      font-family:'Share Tech Mono',monospace;font-size:0.75em;transition:all .15s;
+    }
+    .edit-btn:hover{color:var(--cyan);border-color:var(--cyan);}
+    .edit-btn:disabled{opacity:0.3;cursor:not-allowed;}
+    #sel-info{font-size:0.68em;color:#556;margin-left:auto;}
 
-    /* ── Note list ── */
+    #timeline-canvas{width:100%;border-radius:6px;background:rgba(0,0,15,0.9);cursor:crosshair;display:block;}
+    .tl-legend{display:flex;gap:12px;font-size:0.7em;flex-wrap:wrap;}
+    .tl-legend span{display:flex;align-items:center;gap:4px;}
+    .tl-legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+    .tl-legend .bar{width:18px;height:8px;border-radius:2px;display:inline-block;opacity:0.7;}
+    .tl-tip{font-size:0.65em;color:#334;text-align:right;margin-left:auto;}
+
     .note-list-area {
-      background: rgba(0,0,30,0.7);
-      border: 1px solid rgba(0,255,255,0.15);
-      border-radius: 10px;
-      padding: 12px;
-      display: flex; flex-direction: column; gap: 6px;
+      background:rgba(0,0,30,0.7);border:1px solid rgba(0,255,255,0.15);
+      border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;
     }
-    .note-list-header { display:flex; justify-content:space-between; align-items:center; }
-    .note-list-header h3 {
-      font-family: 'Orbitron', monospace;
-      font-size: 0.7em; letter-spacing:2px; color:var(--cyan); text-transform:uppercase;
-    }
-    #note-count { font-size:0.72em; color:#556; }
-    #note-list { max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
-    #note-list::-webkit-scrollbar { width:4px; }
-    #note-list::-webkit-scrollbar-track { background:rgba(0,0,30,0.5); }
-    #note-list::-webkit-scrollbar-thumb { background:rgba(0,255,255,0.3); border-radius:2px; }
+    .note-list-header{display:flex;justify-content:space-between;align-items:center;}
+    .note-list-header h3{font-family:'Orbitron',monospace;font-size:0.7em;letter-spacing:2px;color:var(--cyan);text-transform:uppercase;}
+    #note-count{font-size:0.72em;color:#556;}
+    #note-list{max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;}
+    #note-list::-webkit-scrollbar{width:4px;}
+    #note-list::-webkit-scrollbar-track{background:rgba(0,0,30,0.5);}
+    #note-list::-webkit-scrollbar-thumb{background:rgba(0,255,255,0.3);border-radius:2px;}
     .note-item {
-      display: flex; align-items: center; gap: 8px;
-      padding: 3px 6px; border-radius: 4px;
-      font-size: 0.74em; background: rgba(0,0,20,0.6);
-      cursor: pointer;
+      display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px;
+      font-size:0.74em;background:rgba(0,0,20,0.6);cursor:pointer;transition:background .1s;
     }
-    .note-item:hover { background: rgba(0,0,40,0.8); }
-    .note-item .ni-arrow { width:16px; text-align:center; }
-    .note-item .ni-time  { color:#667; flex:1; }
-    .note-item .ni-hold  { font-size:0.8em; opacity:0.7; }
-    .note-item .ni-del {
-      cursor:pointer; color:#ff4444; opacity:0.6; font-size:0.9em;
-      border:none; background:none; padding:0 2px;
-    }
-    .note-item .ni-del:hover { opacity:1; }
+    .note-item:hover{background:rgba(0,0,40,0.8);}
+    .note-item.selected-note{background:rgba(0,255,255,0.08);border:1px solid rgba(0,255,255,0.25);}
+    .note-item .ni-arrow{width:16px;text-align:center;}
+    .note-item .ni-time{color:#667;flex:1;}
+    .note-item .ni-hold{font-size:0.8em;opacity:0.7;}
+    .note-item .ni-del{cursor:pointer;color:#ff4444;opacity:0.6;font-size:0.9em;border:none;background:none;padding:0 2px;}
+    .note-item .ni-del:hover{opacity:1;}
 
-    /* ── Import / Export ── */
     .import-area {
-      background: rgba(0,0,30,0.7);
-      border: 1px solid rgba(255,0,170,0.2);
-      border-radius: 10px;
-      padding: 14px;
-      display: flex; flex-direction: column; gap: 10px;
+      background:rgba(0,0,30,0.7);border:1px solid rgba(255,0,170,0.2);
+      border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;
     }
-    .import-area h3 {
-      font-family: 'Orbitron', monospace;
-      font-size: 0.7em; letter-spacing:2px; color:var(--pink); text-transform:uppercase;
-      padding-bottom: 6px;
-      border-bottom: 1px solid rgba(255,0,170,0.1);
-    }
-    .import-row {
-      display: flex; gap: 8px; align-items: stretch;
-    }
+    .import-area h3{font-family:'Orbitron',monospace;font-size:0.7em;letter-spacing:2px;color:var(--pink);text-transform:uppercase;padding-bottom:6px;border-bottom:1px solid rgba(255,0,170,0.1);}
+    .import-row{display:flex;gap:8px;align-items:stretch;}
     #import-file-label {
-      padding: 7px 14px; border-radius: 7px;
-      border: 1px solid rgba(255,0,170,0.35); background: rgba(30,0,20,0.8);
-      color: var(--pink); cursor: pointer;
-      font-family:'Share Tech Mono',monospace; font-size:0.85em;
-      white-space: nowrap; display: flex; align-items: center; gap: 6px;
-      transition: all .15s;
+      padding:7px 14px;border-radius:7px;border:1px solid rgba(255,0,170,0.35);
+      background:rgba(30,0,20,0.8);color:var(--pink);cursor:pointer;
+      font-family:'Share Tech Mono',monospace;font-size:0.85em;
+      white-space:nowrap;display:flex;align-items:center;gap:6px;transition:all .15s;
     }
-    #import-file-label:hover { background: rgba(255,0,170,0.1); box-shadow: 0 0 10px rgba(255,0,170,0.2); }
-    #import-file { display:none; }
+    #import-file-label:hover{background:rgba(255,0,170,0.1);box-shadow:0 0 10px rgba(255,0,170,0.2);}
+    #import-file{display:none;}
     #import-textarea {
-      flex: 1;
-      background: rgba(0,0,15,0.9);
-      border: 1px solid rgba(255,0,170,0.2);
-      border-radius: 6px; color: #cde;
-      font-family: 'Share Tech Mono', monospace; font-size: 0.75em;
-      padding: 8px; resize: vertical; min-height: 60px;
+      flex:1;background:rgba(0,0,15,0.9);border:1px solid rgba(255,0,170,0.2);
+      border-radius:6px;color:#cde;font-family:'Share Tech Mono',monospace;
+      font-size:0.75em;padding:8px;resize:vertical;min-height:60px;
     }
-    #import-textarea:focus { outline: none; border-color: var(--pink); }
-    #import-textarea::placeholder { color: #334; }
+    #import-textarea:focus{outline:none;border-color:var(--pink);}
+    #import-textarea::placeholder{color:#334;}
     #import-btn {
-      padding: 7px 18px; border-radius: 7px;
-      border: 1px solid rgba(255,0,170,0.4); background: rgba(30,0,20,0.8);
-      color: var(--pink); cursor: pointer;
-      font-family:'Share Tech Mono',monospace; font-size:0.85em;
-      white-space: nowrap; align-self: flex-end;
-      transition: all .15s;
+      padding:7px 18px;border-radius:7px;border:1px solid rgba(255,0,170,0.4);
+      background:rgba(30,0,20,0.8);color:var(--pink);cursor:pointer;
+      font-family:'Share Tech Mono',monospace;font-size:0.85em;
+      white-space:nowrap;align-self:flex-end;transition:all .15s;
     }
-    #import-btn:hover { background: rgba(255,0,170,0.12); box-shadow: 0 0 10px rgba(255,0,170,0.2); }
-    #import-status {
-      font-size: 0.68em; color: #445; min-height: 1em;
-    }
-
+    #import-btn:hover{background:rgba(255,0,170,0.12);box-shadow:0 0 10px rgba(255,0,170,0.2);}
+    #import-status{font-size:0.68em;color:#445;min-height:1em;}
     .export-area {
-      background: rgba(0,0,30,0.7);
-      border: 1px solid rgba(0,255,255,0.15);
-      border-radius: 10px;
-      padding: 14px;
-      display: flex; flex-direction: column; gap: 8px;
+      background:rgba(0,0,30,0.7);border:1px solid rgba(0,255,255,0.15);
+      border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;
     }
-    .export-area h3 {
-      font-family: 'Orbitron', monospace;
-      font-size: 0.7em; letter-spacing:2px; color:var(--cyan); text-transform:uppercase;
-    }
+    .export-area h3{font-family:'Orbitron',monospace;font-size:0.7em;letter-spacing:2px;color:var(--cyan);text-transform:uppercase;}
     #export-output {
-      width: 100%; min-height: 80px;
-      background: rgba(0,0,15,0.9);
-      border: 1px solid rgba(0,255,255,0.15);
-      border-radius: 6px; color: #8ab;
-      font-family: 'Share Tech Mono', monospace; font-size: 0.75em;
-      padding: 8px; resize: vertical;
+      width:100%;min-height:80px;background:rgba(0,0,15,0.9);
+      border:1px solid rgba(0,255,255,0.15);border-radius:6px;color:#8ab;
+      font-family:'Share Tech Mono',monospace;font-size:0.75em;padding:8px;resize:vertical;
     }
-    .export-btns { display:flex; gap:8px; flex-wrap:wrap; }
+    .export-btns{display:flex;gap:8px;flex-wrap:wrap;}
   </style>
 </head>
 <body>
@@ -381,25 +240,13 @@
 </header>
 
 <div class="editor-layout">
-
   <!-- ── Sidebar ── -->
   <div class="sidebar">
-
-    <!-- Song settings -->
     <div class="panel-box">
       <h3>Song Settings</h3>
-      <div>
-        <label class="field-label">Song Title</label>
-        <input type="text" id="song-title" placeholder="My Chart" value="My Chart">
-      </div>
-      <div>
-        <label class="field-label">BPM</label>
-        <input type="number" id="bpm-input" value="128" min="40" max="400" step="0.5">
-      </div>
-      <div>
-        <label class="field-label">Offset (seconds)</label>
-        <input type="number" id="offset-input" value="0" min="-5" max="30" step="0.01">
-      </div>
+      <div><label class="field-label">Song Title</label><input type="text" id="song-title" placeholder="My Chart" value="My Chart"></div>
+      <div><label class="field-label">BPM</label><input type="number" id="bpm-input" value="128" min="40" max="400" step="0.5"></div>
+      <div><label class="field-label">Offset (seconds)</label><input type="number" id="offset-input" value="0" min="-5" max="30" step="0.01"></div>
       <div>
         <label class="field-label">Playback Speed</label>
         <div style="display:flex;gap:6px;align-items:center;font-size:0.8em;color:#8ab;">
@@ -410,7 +257,6 @@
       </div>
     </div>
 
-    <!-- Lane selector -->
     <div class="panel-box">
       <h3>Active Lane</h3>
       <div class="lane-btns">
@@ -422,7 +268,6 @@
       <p style="font-size:0.65em;color:#445;text-align:center;">A/S/W/D to select &amp; stamp while playing</p>
     </div>
 
-    <!-- Hold note settings -->
     <div class="panel-box">
       <h3>Note Type</h3>
       <div class="hold-row">
@@ -439,7 +284,6 @@
       </p>
     </div>
 
-    <!-- Playback -->
     <div class="panel-box">
       <h3>Playback</h3>
       <button class="action-btn" id="play-btn" onclick="togglePlay()">▶ PLAY</button>
@@ -447,7 +291,6 @@
       <button class="action-btn danger" onclick="clearAllNotes()">🗑 CLEAR ALL</button>
     </div>
 
-    <!-- Snap -->
     <div class="panel-box">
       <h3>Beat Snap</h3>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -457,19 +300,16 @@
         <button class="action-btn" id="snap-0"  onclick="setSnap(0)"  style="flex:1;padding:5px;color:#667">Free</button>
       </div>
     </div>
-
   </div>
 
   <!-- ── Main area ── -->
   <div class="main-area">
-
-    <!-- Audio -->
     <div class="audio-bar">
       <h3>Audio Track</h3>
       <div class="audio-top">
         <label id="audio-upload-btn" for="audio-file">📂 Upload Audio</label>
         <input type="file" id="audio-file" accept="audio/*">
-        <span id="audio-name" style="font-size:0.75em;color:#556;flex:1;">No audio loaded — editing without audio</span>
+        <span id="audio-name" style="font-size:0.75em;color:#556;flex:1;">No audio loaded</span>
         <canvas id="waveform-canvas" width="400" height="60"></canvas>
         <div class="time-display" id="time-display">0.000s</div>
       </div>
@@ -478,12 +318,27 @@
     <!-- Timeline -->
     <div class="timeline-container">
       <div class="timeline-header">
-        <h3>Timeline — Click or use keys to stamp notes</h3>
+        <h3>Timeline</h3>
         <div class="zoom-row">
           Zoom: <input type="range" id="zoom-slider" min="20" max="300" value="80">
           <span id="zoom-val">80px/s</span>
         </div>
       </div>
+
+      <!-- Tool bar -->
+      <div class="tool-bar">
+        <span>TOOL:</span>
+        <button class="tool-btn active" id="tool-stamp"  onclick="setTool('stamp')">✏ Stamp</button>
+        <button class="tool-btn"        id="tool-select" onclick="setTool('select')">▣ Select</button>
+        <button class="tool-btn"        id="tool-move"   onclick="setTool('move')">✥ Move</button>
+        <div class="tool-sep"></div>
+        <button class="edit-btn" id="btn-cut"   onclick="cutSelection()"   disabled title="Cut (Ctrl+X)">✂ Cut</button>
+        <button class="edit-btn" id="btn-copy"  onclick="copySelection()"  disabled title="Copy (Ctrl+C)">⧉ Copy</button>
+        <button class="edit-btn" id="btn-paste" onclick="pasteClipboard()" disabled title="Paste at playhead (Ctrl+V)">⊕ Paste</button>
+        <button class="edit-btn" id="btn-desel" onclick="deselectAll()"    disabled title="Deselect (Esc)">✕ Desel</button>
+        <span id="sel-info"></span>
+      </div>
+
       <canvas id="timeline-canvas" height="180"></canvas>
       <div class="tl-legend">
         <span><span class="dot" style="background:var(--l)"></span>Left (A)</span>
@@ -491,11 +346,10 @@
         <span><span class="dot" style="background:var(--u)"></span>Up (W)</span>
         <span><span class="dot" style="background:var(--r)"></span>Right (D)</span>
         <span><span class="bar" style="background:var(--l)"></span>Hold</span>
-        <span class="tl-tip">Click = seek &nbsp;|&nbsp; Right-click note = delete &nbsp;|&nbsp; Drag right edge = set hold</span>
+        <span class="tl-tip" id="tl-tip">Stamp: click = place · Right-click = delete · Drag tail = hold length</span>
       </div>
     </div>
 
-    <!-- Note list -->
     <div class="note-list-area">
       <div class="note-list-header">
         <h3>Notes</h3>
@@ -504,39 +358,34 @@
       <div id="note-list"></div>
     </div>
 
-    <!-- Import -->
     <div class="import-area">
       <h3>📥 Import Chart</h3>
       <div class="import-row">
-        <!-- File picker -->
         <label id="import-file-label" for="import-file">📂 Open .json</label>
         <input type="file" id="import-file" accept=".json,application/json">
-        <!-- Paste area -->
         <textarea id="import-textarea" placeholder="…or paste chart JSON here"></textarea>
         <button id="import-btn" onclick="importFromTextarea()">Load</button>
       </div>
       <div id="import-status"></div>
     </div>
 
-    <!-- Export -->
     <div class="export-area">
       <h3>📤 Export Chart</h3>
-      <textarea id="export-output" readonly placeholder="Click 'Generate JSON' to export your chart…"></textarea>
+      <textarea id="export-output" readonly placeholder="Click 'Generate JSON' to export…"></textarea>
       <div class="export-btns">
         <button class="action-btn green" onclick="exportChart()" style="flex:1;">Generate JSON</button>
         <button class="action-btn"       onclick="copyChart()"   style="flex:1;">📋 Copy</button>
         <button class="action-btn"       onclick="downloadChart()" style="flex:1;">💾 Download .json</button>
       </div>
     </div>
-
-  </div><!-- main-area -->
-</div><!-- editor-layout -->
+  </div>
+</div>
 
 <script>
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════
 //  STATE
-// ═══════════════════════════════════════════
-let notes      = [];          // { time, lane, duration }  duration=0 → tap
+// ═══════════════════════════════════════
+let notes      = [];   // { time, lane, duration }
 let activeLane = 0;
 let snapDiv    = 4;
 let bpm        = 128;
@@ -553,114 +402,194 @@ let audioCtx   = null;
 let audioSource= null;
 let audioSpeed = 1.0;
 
-// Hold note state
 let holdMode     = false;
 let holdDuration = 0.5;
 
-// Drag-to-resize state
-let dragNote  = null;
-let dragStart = null;
+// ── Tool state ──
+// 'stamp'  — click to place, right-click to delete, drag tail = resize hold
+// 'select' — click-drag to rubber-band select; click on note to toggle; Shift+click to add
+// 'move'   — drag selected notes; drag empty = seek
+let currentTool = 'stamp';
+
+// Selection
+let selectedIndices = new Set();   // indices into `notes`
+let clipboard       = [];          // deep copies of note objects
+
+// Drag states (shared across tools)
+let dragNote  = null;   // index — resize hold tail (all tools)
+let dragStart = null;   // mouseX at drag start
 let dragOrigD = 0;
 
-// ═══════════════════════════════════════════
+// Move-drag state (move tool)
+let moveDrag       = false;
+let moveDragStartX = 0;
+let moveDragOrigTimes = [];  // original times of selected notes
+
+// Rubber-band state (select tool)
+let bandActive = false;
+let bandStartX = 0, bandStartY = 0, bandX = 0, bandY = 0;
+
+// ═══════════════════════════════════════
 //  Hold toggle
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════
 function toggleHold() {
-  holdMode = !holdMode;
-  const tog = document.getElementById('hold-toggle');
-  const lbl = document.getElementById('hold-label');
-  const wrap = document.getElementById('hold-dur-wrap');
-  tog.classList.toggle('on', holdMode);
-  lbl.textContent = holdMode ? 'on' : 'off';
-  wrap.classList.toggle('visible', holdMode);
+  holdMode=!holdMode;
+  document.getElementById('hold-toggle').classList.toggle('on',holdMode);
+  document.getElementById('hold-label').textContent=holdMode?'on':'off';
+  document.getElementById('hold-dur-wrap').classList.toggle('visible',holdMode);
+}
+document.getElementById('hold-dur-input').addEventListener('input',e=>{holdDuration=parseFloat(e.target.value)||0.5;});
+
+// ═══════════════════════════════════════
+//  Tool switching
+// ═══════════════════════════════════════
+const TOOL_TIPS = {
+  stamp:  'Stamp: click = place note · Right-click = delete · Drag tail = hold length',
+  select: 'Select: drag = rubber-band · Click note = toggle · Shift+click = add · Drag selected = move',
+  move:   'Move: drag selected notes · Click empty = seek · Right-click note = delete',
+};
+
+function setTool(t) {
+  currentTool = t;
+  document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tool-'+t).classList.add('active');
+  document.getElementById('tl-tip').textContent = TOOL_TIPS[t];
+  if(t==='stamp') deselectAll();
+  updateSelectionUI();
+  drawTimeline();
 }
 
-document.getElementById('hold-dur-input').addEventListener('input', e=>{
-  holdDuration = parseFloat(e.target.value) || 0.5;
-});
+// ═══════════════════════════════════════
+//  Selection helpers
+// ═══════════════════════════════════════
+function updateSelectionUI() {
+  const n = selectedIndices.size;
+  document.getElementById('sel-info').textContent = n>0 ? `${n} note${n>1?'s':''} selected` : '';
+  const hasClip = clipboard.length>0;
+  document.getElementById('btn-cut').disabled   = n===0;
+  document.getElementById('btn-copy').disabled  = n===0;
+  document.getElementById('btn-paste').disabled = !hasClip;
+  document.getElementById('btn-desel').disabled = n===0;
+}
 
-// ═══════════════════════════════════════════
+function deselectAll() {
+  selectedIndices.clear();
+  updateSelectionUI();
+  refreshNoteList();
+  drawTimeline();
+}
+
+function selectAll() {
+  selectedIndices = new Set(notes.map((_,i)=>i));
+  updateSelectionUI();
+  refreshNoteList();
+  drawTimeline();
+}
+
+function copySelection() {
+  clipboard = [...selectedIndices].map(i=>({...notes[i]}));
+  updateSelectionUI();
+}
+
+function cutSelection() {
+  copySelection();
+  const toRemove = [...selectedIndices].sort((a,b)=>b-a);
+  toRemove.forEach(i=>notes.splice(i,1));
+  selectedIndices.clear();
+  refreshNoteList(); drawTimeline(); updateSelectionUI();
+}
+
+function pasteClipboard() {
+  if(!clipboard.length) return;
+  const minT = Math.min(...clipboard.map(n=>n.time));
+  const pasteAnchor = snapTime(playhead);
+  const shift = pasteAnchor - minT;
+  const newNotes = clipboard.map(n=>({time:parseFloat((n.time+shift).toFixed(4)),lane:n.lane,duration:n.duration||0}));
+  const startIdx = notes.length;
+  notes.push(...newNotes);
+  notes.sort((a,b)=>a.time-b.time);
+  // Re-select pasted notes (find by matching time+lane+duration)
+  selectedIndices.clear();
+  newNotes.forEach(nn=>{
+    const idx = notes.findIndex(n=>n.time===nn.time&&n.lane===nn.lane&&n.duration===nn.duration);
+    if(idx>=0) selectedIndices.add(idx);
+  });
+  refreshNoteList(); drawTimeline(); updateSelectionUI();
+}
+
+// ═══════════════════════════════════════
 //  Audio
-// ═══════════════════════════════════════════
-document.getElementById('audio-file').addEventListener('change', async (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-  const arr  = await file.arrayBuffer();
-  audioBuffer = await audioCtx.decodeAudioData(arr);
-  duration = audioBuffer.duration;
-  document.getElementById('audio-name').textContent = file.name + ` (${duration.toFixed(1)}s)`;
+// ═══════════════════════════════════════
+document.getElementById('audio-file').addEventListener('change',async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  const arr=await file.arrayBuffer();
+  audioBuffer=await audioCtx.decodeAudioData(arr);
+  duration=audioBuffer.duration;
+  document.getElementById('audio-name').textContent=file.name+` (${duration.toFixed(1)}s)`;
   drawWaveform();
 });
 
 function drawWaveform() {
-  const cvs = document.getElementById('waveform-canvas');
-  const ctx  = cvs.getContext('2d');
+  const cvs=document.getElementById('waveform-canvas');
+  const ctx=cvs.getContext('2d');
   ctx.clearRect(0,0,cvs.width,cvs.height);
-  if(!audioBuffer) {
+  if(!audioBuffer){
     ctx.fillStyle='rgba(0,255,255,0.1)'; ctx.fillRect(0,0,cvs.width,cvs.height);
-    ctx.fillStyle='#334'; ctx.font='12px monospace';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('no audio', cvs.width/2, cvs.height/2);
-    return;
+    ctx.fillStyle='#334'; ctx.font='12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('no audio',cvs.width/2,cvs.height/2); return;
   }
-  const data  = audioBuffer.getChannelData(0);
-  const step  = Math.ceil(data.length / cvs.width);
-  const amp   = cvs.height/2;
+  const data=audioBuffer.getChannelData(0), step=Math.ceil(data.length/cvs.width), amp=cvs.height/2;
   ctx.fillStyle='#03001a'; ctx.fillRect(0,0,cvs.width,cvs.height);
   ctx.beginPath(); ctx.strokeStyle='#00ffff'; ctx.lineWidth=1;
-  for(let x=0;x<cvs.width;x++) {
+  for(let x=0;x<cvs.width;x++){
     let max=0;
-    for(let s=x*step; s<(x+1)*step && s<data.length; s++) max=Math.max(max,Math.abs(data[s]));
-    ctx.moveTo(x, amp-max*amp); ctx.lineTo(x, amp+max*amp);
+    for(let s=x*step;s<(x+1)*step&&s<data.length;s++) max=Math.max(max,Math.abs(data[s]));
+    ctx.moveTo(x,amp-max*amp); ctx.lineTo(x,amp+max*amp);
   }
   ctx.stroke();
 }
 
-document.getElementById('waveform-canvas').addEventListener('click', e=>{
+document.getElementById('waveform-canvas').addEventListener('click',e=>{
   const r=e.currentTarget.getBoundingClientRect();
   seek((e.clientX-r.left)/r.width*duration);
 });
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════
 //  Playback
-// ═══════════════════════════════════════════
-function togglePlay() { isPlaying ? pause() : play(); }
-function play() {
+// ═══════════════════════════════════════
+function togglePlay(){isPlaying?pause():play();}
+function play(){
   isPlaying=true; playOffset=playhead; playStart=Date.now();
   document.getElementById('play-btn').textContent='⏸ PAUSE';
-  if(audioBuffer && audioCtx) {
+  if(audioBuffer&&audioCtx){
     if(audioCtx.state==='suspended') audioCtx.resume();
-    if(audioSource) { try{audioSource.stop();}catch(e){} }
-    audioSource = audioCtx.createBufferSource();
-    audioSource.buffer = audioBuffer;
-    audioSource.playbackRate.value = audioSpeed;
-    audioSource.connect(audioCtx.destination);
-    audioSource.start(0, Math.max(0, playhead - offset));
-    audioSource.onended = ()=>{ if(isPlaying) pause(); };
+    if(audioSource){try{audioSource.stop();}catch(e){}}
+    audioSource=audioCtx.createBufferSource(); audioSource.buffer=audioBuffer;
+    audioSource.playbackRate.value=audioSpeed; audioSource.connect(audioCtx.destination);
+    audioSource.start(0,Math.max(0,playhead-offset));
+    audioSource.onended=()=>{if(isPlaying)pause();};
   }
   requestAnimationFrame(tick);
 }
-function pause() {
+function pause(){
   isPlaying=false;
   document.getElementById('play-btn').textContent='▶ PLAY';
-  if(audioSource) { try{audioSource.stop();}catch(e){} audioSource=null; }
+  if(audioSource){try{audioSource.stop();}catch(e){} audioSource=null;}
 }
-function seek(t) {
-  const wasPlaying=isPlaying;
-  if(isPlaying) pause();
+function seek(t){
+  const wasPlaying=isPlaying; if(isPlaying) pause();
   playhead=Math.max(0,Math.min(duration,t));
-  if(wasPlaying) play();
-  drawTimeline();
+  if(wasPlaying) play(); drawTimeline();
 }
-function jumpToStart() { seek(0); }
+function jumpToStart(){seek(0);}
 
-function tick() {
+function tick(){
   if(!isPlaying) return;
   const elapsed=(Date.now()-playStart)/1000*audioSpeed;
   playhead=playOffset+elapsed;
-  if(playhead>=duration) { playhead=duration; pause(); }
-  document.getElementById('time-display').textContent = playhead.toFixed(3)+'s';
+  if(playhead>=duration){playhead=duration;pause();}
+  document.getElementById('time-display').textContent=playhead.toFixed(3)+'s';
   const tlCvs=document.getElementById('timeline-canvas');
   const phX=playhead*zoom-scrollX;
   if(phX>tlCvs.clientWidth*0.75) scrollX=playhead*zoom-tlCvs.clientWidth*0.5;
@@ -669,18 +598,24 @@ function tick() {
   requestAnimationFrame(tick);
 }
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════
 //  Timeline Drawing
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════
 const LANE_COLORS=['#00ffff','#ff00aa','#00ff88','#ffcc00'];
 const LANE_LABELS=['◄','▼','▲','►'];
-const LANE_Y=[30, 70, 110, 150];
+const LANE_Y=[30,70,110,150];
 const NOTE_R=10;
 
-function timeToX(t)  { return t*zoom - scrollX; }
-function xToTime(x)  { return (x+scrollX)/zoom; }
+function timeToX(t){return t*zoom-scrollX;}
+function xToTime(x){return(x+scrollX)/zoom;}
 
-function drawTimeline() {
+function snapTime(t) {
+  if(snapDiv===0) return t;
+  const subSec=(60/bpm)/(snapDiv/4);
+  return Math.round(t/subSec)*subSec;
+}
+
+function drawTimeline(){
   const cvs=document.getElementById('timeline-canvas');
   cvs.width=cvs.clientWidth||700;
   const ctx=cvs.getContext('2d');
@@ -691,21 +626,17 @@ function drawTimeline() {
   // Beat grid
   const beatSec=60/bpm;
   const startBeat=Math.floor((scrollX/zoom)/beatSec);
-  const endBeat  =Math.ceil(((scrollX+W)/zoom)/beatSec)+1;
-  for(let b=startBeat; b<=endBeat; b++) {
+  const endBeat=Math.ceil(((scrollX+W)/zoom)/beatSec)+1;
+  for(let b=startBeat;b<=endBeat;b++){
     const x=b*beatSec*zoom-scrollX;
     const isMeasure=b%4===0;
     ctx.strokeStyle=isMeasure?'rgba(0,255,255,0.3)':'rgba(0,255,255,0.08)';
     ctx.lineWidth=isMeasure?1.5:0.5;
     ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
-    if(isMeasure) {
-      ctx.fillStyle='rgba(0,255,255,0.4)';
-      ctx.font='9px Share Tech Mono';
-      ctx.fillText(b/4+1, x+3, 10);
-    }
-    if(snapDiv>4) {
+    if(isMeasure){ctx.fillStyle='rgba(0,255,255,0.4)';ctx.font='9px Share Tech Mono';ctx.fillText(b/4+1,x+3,10);}
+    if(snapDiv>4){
       const sub=beatSec/snapDiv*4;
-      for(let s=1;s<snapDiv/4;s++) {
+      for(let s=1;s<snapDiv/4;s++){
         const sx=x+s*sub*zoom;
         ctx.strokeStyle='rgba(0,255,255,0.04)'; ctx.lineWidth=0.5;
         ctx.beginPath(); ctx.moveTo(sx,0); ctx.lineTo(sx,H); ctx.stroke();
@@ -720,33 +651,41 @@ function drawTimeline() {
     ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
     ctx.fillStyle=col; ctx.font='bold 11px Orbitron,monospace';
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.fillText(LANE_LABELS[i], 4, y);
+    ctx.fillText(LANE_LABELS[i],4,y);
   });
 
-  // Notes (hold bars drawn first, then heads on top)
+  // Selection rubber-band
+  if(bandActive){
+    const bx=Math.min(bandStartX,bandX), by=Math.min(bandStartY,bandY);
+    const bw=Math.abs(bandX-bandStartX), bh=Math.abs(bandY-bandStartY);
+    ctx.fillStyle='rgba(0,255,255,0.07)'; ctx.fillRect(bx,by,bw,bh);
+    ctx.strokeStyle='rgba(0,255,255,0.5)'; ctx.lineWidth=1;
+    ctx.setLineDash([4,3]); ctx.strokeRect(bx,by,bw,bh); ctx.setLineDash([]);
+  }
+
+  // Notes
   notes.forEach((n,idx)=>{
     const x=timeToX(n.time);
     const y=LANE_Y[n.lane];
     const col=LANE_COLORS[n.lane];
     const dur=n.duration||0;
+    const isSel=selectedIndices.has(idx);
 
-    // Hold tail bar
-    if(dur>0) {
+    // Hold tail
+    if(dur>0){
       const barW=dur*zoom;
       const x1=x+NOTE_R, x2=x+NOTE_R+barW;
-      if(x2>0 && x1<W) {
+      if(x2>0&&x1<W){
         ctx.save();
-        ctx.fillStyle=col+'55';
-        ctx.strokeStyle=col+'99';
-        ctx.lineWidth=1;
-        const bh=14;
-        const bx=Math.max(x1,0), bx2=Math.min(x2,W);
-        ctx.fillRect(bx, y-bh/2, bx2-bx, bh);
-        ctx.strokeRect(bx, y-bh/2, bx2-bx, bh);
-        if(x2<W && x2>0) {
+        ctx.fillStyle=isSel?col+'88':col+'55';
+        ctx.strokeStyle=isSel?col+'ff':col+'99';
+        ctx.lineWidth=isSel?2:1;
+        const bh=14, bx=Math.max(x1,0), bx2=Math.min(x2,W);
+        ctx.fillRect(bx,y-bh/2,bx2-bx,bh);
+        ctx.strokeRect(bx,y-bh/2,bx2-bx,bh);
+        if(x2<W&&x2>0){
           ctx.fillStyle=col;
-          ctx.beginPath();
-          ctx.roundRect ? ctx.roundRect(x2-4, y-bh/2, 8, bh, 3) : ctx.rect(x2-4, y-bh/2, 8, bh);
+          if(ctx.roundRect) ctx.roundRect(x2-4,y-bh/2,8,bh,3); else ctx.rect(x2-4,y-bh/2,8,bh);
           ctx.fill();
         }
         ctx.restore();
@@ -756,17 +695,20 @@ function drawTimeline() {
     // Note head
     if(x<-NOTE_R||x>W+NOTE_R) return;
     ctx.save();
+    if(isSel){
+      ctx.shadowColor='#ffffff'; ctx.shadowBlur=18;
+      ctx.beginPath(); ctx.arc(x,y,NOTE_R+3,0,Math.PI*2);
+      ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.stroke();
+    }
     ctx.shadowColor=col; ctx.shadowBlur=12;
     ctx.beginPath(); ctx.arc(x,y,NOTE_R,0,Math.PI*2);
-    ctx.fillStyle=col+'cc'; ctx.fill();
-    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle=isSel?col:''+col+'cc'; ctx.fill();
+    ctx.strokeStyle=isSel?'#ffffff':'#fff'; ctx.lineWidth=isSel?2:1.5; ctx.stroke();
     ctx.restore();
     ctx.fillStyle='#000'; ctx.font='bold 9px Orbitron,monospace';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(LANE_LABELS[n.lane], x, y);
-    if(dur>0) {
-      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y-NOTE_R-3,2,0,Math.PI*2); ctx.fill();
-    }
+    ctx.fillText(LANE_LABELS[n.lane],x,y);
+    if(dur>0){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y-NOTE_R-3,2,0,Math.PI*2);ctx.fill();}
   });
 
   // Playhead
@@ -780,249 +722,413 @@ function drawTimeline() {
   ctx.restore();
 }
 
-// ═══════════════════════════════════════════
-//  Timeline Interaction
-// ═══════════════════════════════════════════
-const tlCvs=document.getElementById('timeline-canvas');
-
-function hitTestNote(mx, my) {
-  let headIdx=-1, headDist=Infinity;
-  let handleIdx=-1;
-
+// ═══════════════════════════════════════
+//  Hit-testing helpers
+// ═══════════════════════════════════════
+function hitTestHead(mx,my){
+  let best=-1, bestD=NOTE_R+6;
   notes.forEach((n,i)=>{
-    const x=timeToX(n.time);
-    const y=LANE_Y[n.lane];
-    const dur=n.duration||0;
-
-    const d=Math.hypot(mx-x, my-y);
-    if(d<NOTE_R+4 && d<headDist) { headDist=d; headIdx=i; }
-
-    if(dur>0) {
-      const hx=x+NOTE_R+dur*zoom;
-      const bh=14;
-      if(Math.abs(mx-hx)<8 && Math.abs(my-y)<bh) { handleIdx=i; }
-    }
+    const x=timeToX(n.time), y=LANE_Y[n.lane];
+    const d=Math.hypot(mx-x,my-y);
+    if(d<bestD){bestD=d;best=i;}
   });
-  return { headIdx, handleIdx };
+  return best;
 }
 
-tlCvs.addEventListener('mousedown', e=>{
+function hitTestHandle(mx,my){
+  let best=-1;
+  notes.forEach((n,i)=>{
+    const dur=n.duration||0; if(dur<=0) return;
+    const x=timeToX(n.time), y=LANE_Y[n.lane];
+    const hx=x+NOTE_R+dur*zoom, bh=14;
+    if(Math.abs(mx-hx)<8&&Math.abs(my-y)<bh) best=i;
+  });
+  return best;
+}
+
+function notesInBand(x0,y0,x1,y1){
+  const tMin=xToTime(Math.min(x0,x1)), tMax=xToTime(Math.max(x0,x1));
+  const yMin=Math.min(y0,y1), yMax=Math.max(y0,y1);
+  return notes.reduce((acc,n,i)=>{
+    if(n.time>=tMin&&n.time<=tMax&&LANE_Y[n.lane]>=yMin-NOTE_R&&LANE_Y[n.lane]<=yMax+NOTE_R) acc.push(i);
+    return acc;
+  },[]);
+}
+
+// ═══════════════════════════════════════
+//  Timeline mouse interaction
+// ═══════════════════════════════════════
+const tlCvs=document.getElementById('timeline-canvas');
+
+tlCvs.addEventListener('mousedown',e=>{
   const r=tlCvs.getBoundingClientRect();
   const mx=e.clientX-r.left, my=e.clientY-r.top;
-  const {handleIdx}=hitTestNote(mx,my);
-  if(handleIdx>=0) {
+
+  // Hold tail resize handle — highest priority in all tools
+  const handleIdx=hitTestHandle(mx,my);
+  if(handleIdx>=0){
     e.preventDefault();
-    dragNote=handleIdx;
+    dragNote=handleIdx; dragStart=e.clientX; dragOrigD=notes[handleIdx].duration||0;
+    return;
+  }
+
+  if(currentTool==='stamp'){
+    // Right-click = delete
+    if(e.button===2){
+      const hi=hitTestHead(mx,my);
+      if(hi>=0){notes.splice(hi,1);refreshNoteList();drawTimeline();}
+      return;
+    }
+    // Left-click on empty = seek (mouseup will stamp if no drag)
     dragStart=e.clientX;
-    dragOrigD=notes[handleIdx].duration||0;
+    return;
+  }
+
+  if(currentTool==='select'){
+    if(e.button===2){
+      const hi=hitTestHead(mx,my);
+      if(hi>=0){notes.splice(hi,1);selectedIndices.delete(hi);
+        // remap indices above deleted
+        const newSel=new Set();
+        selectedIndices.forEach(i=>{if(i<hi) newSel.add(i); else if(i>hi) newSel.add(i-1);});
+        selectedIndices=newSel;
+        refreshNoteList();drawTimeline();updateSelectionUI();}
+      return;
+    }
+    const hi=hitTestHead(mx,my);
+    if(hi>=0){
+      // Toggle selection on click
+      if(e.shiftKey) selectedIndices.has(hi)?selectedIndices.delete(hi):selectedIndices.add(hi);
+      else{ selectedIndices.clear(); selectedIndices.add(hi); }
+      updateSelectionUI(); refreshNoteList(); drawTimeline();
+      // Prepare for possible move-drag
+      moveDrag=false; moveDragStartX=e.clientX;
+      moveDragOrigTimes=notes.map(n=>n.time);
+      dragStart=e.clientX;
+      return;
+    }
+    // Start rubber band
+    bandActive=true; bandStartX=mx; bandStartY=my; bandX=mx; bandY=my;
+    if(!e.shiftKey) selectedIndices.clear();
+    dragStart=e.clientX;
+    return;
+  }
+
+  if(currentTool==='move'){
+    if(e.button===2){
+      const hi=hitTestHead(mx,my);
+      if(hi>=0){notes.splice(hi,1);selectedIndices.delete(hi);
+        const newSel=new Set(); selectedIndices.forEach(i=>{if(i<hi) newSel.add(i); else if(i>hi) newSel.add(i-1);});
+        selectedIndices=newSel;
+        refreshNoteList();drawTimeline();updateSelectionUI();}
+      return;
+    }
+    const hi=hitTestHead(mx,my);
+    if(hi>=0){
+      if(!selectedIndices.has(hi)){selectedIndices.clear();selectedIndices.add(hi);}
+      moveDrag=true; moveDragStartX=e.clientX;
+      moveDragOrigTimes=notes.map(n=>n.time);
+      updateSelectionUI(); refreshNoteList(); drawTimeline();
+      return;
+    }
+    // Click empty space = seek
+    dragStart=e.clientX;
+    return;
   }
 });
 
-window.addEventListener('mousemove', e=>{
-  if(dragNote===null) return;
-  const delta=(e.clientX-dragStart)/zoom;
-  const newDur=Math.max(0.05, dragOrigD+delta);
-  notes[dragNote].duration=parseFloat(newDur.toFixed(3));
-  refreshNoteList(); drawTimeline();
+window.addEventListener('mousemove',e=>{
+  // Hold tail resize
+  if(dragNote!==null){
+    const delta=(e.clientX-dragStart)/zoom;
+    notes[dragNote].duration=parseFloat(Math.max(0.05,dragOrigD+delta).toFixed(3));
+    refreshNoteList(); drawTimeline(); return;
+  }
+
+  // Note move drag (select or move tool)
+  if(moveDrag&&selectedIndices.size>0){
+    const deltaT=(e.clientX-moveDragStartX)/zoom;
+    const selArr=[...selectedIndices];
+    // Clamp so nothing goes below 0
+    const minOrig=Math.min(...selArr.map(i=>moveDragOrigTimes[i]));
+    const clampedDelta=Math.max(-minOrig,deltaT);
+    selArr.forEach(i=>{
+      let newT=moveDragOrigTimes[i]+clampedDelta;
+      newT=snapTime(newT);
+      notes[i].time=parseFloat(newT.toFixed(4));
+    });
+    notes.sort((a,b)=>a.time-b.time);
+    // Re-map selection indices after sort
+    const snapTimes=selArr.map(i=>({orig:moveDragOrigTimes[i],dur:notes.find((_,ni)=>ni===i)?.duration}));
+    refreshNoteList(); drawTimeline(); return;
+  }
+
+  // Rubber band
+  if(bandActive){
+    const r=tlCvs.getBoundingClientRect();
+    bandX=e.clientX-r.left; bandY=e.clientY-r.top;
+    drawTimeline(); return;
+  }
 });
 
-window.addEventListener('mouseup', ()=>{
-  if(dragNote!==null) { dragNote=null; dragStart=null; dragOrigD=0; }
+window.addEventListener('mouseup',e=>{
+  if(dragNote!==null){dragNote=null;dragStart=null;dragOrigD=0;return;}
+
+  if(moveDrag){
+    moveDrag=false;
+    // Re-sort and remap selection to new indices
+    const selTimes=[...selectedIndices].map(i=>notes[i]?.time).filter(t=>t!==undefined);
+    notes.sort((a,b)=>a.time-b.time);
+    const newSel=new Set();
+    selTimes.forEach(t=>{const idx=notes.findIndex(n=>n.time===t);if(idx>=0) newSel.add(idx);});
+    selectedIndices=newSel;
+    refreshNoteList(); drawTimeline(); updateSelectionUI(); return;
+  }
+
+  if(bandActive){
+    bandActive=false;
+    const inBand=notesInBand(bandStartX,bandStartY,bandX,bandY);
+    inBand.forEach(i=>selectedIndices.add(i));
+    updateSelectionUI(); refreshNoteList(); drawTimeline(); return;
+  }
+
+  // Stamp tool click (no drag)
+  if(currentTool==='stamp'&&dragStart!==null){
+    if(Math.abs(e.clientX-dragStart)<5){
+      const r=tlCvs.getBoundingClientRect();
+      const mx=e.clientX-r.left;
+      seek(xToTime(mx));
+    }
+    dragStart=null;
+  }
 });
 
-tlCvs.addEventListener('mousemove', e=>{
+tlCvs.addEventListener('click',e=>{
   if(dragNote!==null) return;
+  if(moveDrag) return;
+  if(bandActive) return;
+
   const r=tlCvs.getBoundingClientRect();
   const mx=e.clientX-r.left, my=e.clientY-r.top;
-  const {handleIdx}=hitTestNote(mx,my);
-  tlCvs.style.cursor=handleIdx>=0?'ew-resize':'crosshair';
-});
 
-tlCvs.addEventListener('click', e=>{
-  if(dragStart!==null && Math.abs(e.clientX-dragStart)>4) return;
-  const r=tlCvs.getBoundingClientRect();
-  const mx=e.clientX-r.left, my=e.clientY-r.top;
-  const {handleIdx}=hitTestNote(mx,my);
-  if(handleIdx>=0) return;
-  seek(xToTime(mx));
-});
-
-tlCvs.addEventListener('contextmenu', e=>{
-  e.preventDefault();
-  const r=tlCvs.getBoundingClientRect();
-  const mx=e.clientX-r.left, my=e.clientY-r.top;
-  const t=xToTime(mx);
-  let best=null; let bestD=14/zoom;
-  notes.forEach((n,i)=>{ const d=Math.abs(n.time-t); if(d<bestD){ bestD=d; best=i; } });
-  if(best!==null){ notes.splice(best,1); refreshNoteList(); drawTimeline(); }
-});
-
-tlCvs.addEventListener('wheel', e=>{
-  e.preventDefault();
-  scrollX=Math.max(0, scrollX+e.deltaY*0.8);
-  drawTimeline();
-}, {passive:false});
-
-// ═══════════════════════════════════════════
-//  Stamp note
-// ═══════════════════════════════════════════
-function stampNote(lane) {
-  let t=playhead;
-  if(snapDiv>0) {
-    const subSec=(60/bpm)/(snapDiv/4);
-    t=Math.round(t/subSec)*subSec;
+  if(currentTool==='stamp'){
+    // Don't place if it was a drag/seek
+    if(dragStart!==null&&Math.abs(e.clientX-dragStart)>5){dragStart=null;return;}
+    // Place note at click time
+    const t=snapTime(xToTime(mx));
+    const dur=holdMode?holdDuration:0;
+    const dup=notes.some(n=>n.lane===activeLane&&Math.abs(n.time-t)<0.02);
+    if(!dup){
+      notes.push({time:t,lane:activeLane,duration:dur});
+      notes.sort((a,b)=>a.time-b.time);
+      refreshNoteList(); drawTimeline();
+    }
+    dragStart=null;
   }
-  const dur = holdMode ? holdDuration : 0;
+});
+
+tlCvs.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  // Only delete in stamp mode; other modes handle via mousedown
+  if(currentTool!=='stamp') return;
+  const r=tlCvs.getBoundingClientRect();
+  const mx=e.clientX-r.left;
+  const t=xToTime(mx);
+  let best=null,bestD=14/zoom;
+  notes.forEach((n,i)=>{const d=Math.abs(n.time-t);if(d<bestD){bestD=d;best=i;}});
+  if(best!==null){notes.splice(best,1);refreshNoteList();drawTimeline();}
+});
+
+tlCvs.addEventListener('mousemove',e=>{
+  if(dragNote!==null||moveDrag||bandActive) return;
+  const r=tlCvs.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  const handleIdx=hitTestHandle(mx,my);
+  if(handleIdx>=0){tlCvs.style.cursor='ew-resize';return;}
+  const headIdx=hitTestHead(mx,my);
+  if(currentTool==='move'&&headIdx>=0) tlCvs.style.cursor='grab';
+  else if(currentTool==='select'&&selectedIndices.has(headIdx)) tlCvs.style.cursor='grab';
+  else tlCvs.style.cursor='crosshair';
+});
+
+tlCvs.addEventListener('wheel',e=>{
+  e.preventDefault();
+  scrollX=Math.max(0,scrollX+e.deltaY*0.8);
+  drawTimeline();
+},{passive:false});
+
+// ═══════════════════════════════════════
+//  Stamp note from keyboard
+// ═══════════════════════════════════════
+function stampNote(lane){
+  let t=snapTime(playhead);
+  const dur=holdMode?holdDuration:0;
   const dup=notes.some(n=>n.lane===lane&&Math.abs(n.time-t)<0.02);
-  if(!dup) {
-    notes.push({time:t, lane, duration:dur});
+  if(!dup){
+    notes.push({time:t,lane,duration:dur});
     notes.sort((a,b)=>a.time-b.time);
     refreshNoteList(); drawTimeline();
   }
 }
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════
 //  Controls
-// ═══════════════════════════════════════════
-function selectLane(l) {
+// ═══════════════════════════════════════
+function selectLane(l){
   activeLane=l;
   document.querySelectorAll('.lane-btn').forEach((b,i)=>b.classList.toggle('selected',i===l));
 }
-function setSnap(d) {
+function setSnap(d){
   snapDiv=d;
   document.querySelectorAll('[id^=snap-]').forEach(b=>b.style.color='');
-  const active=document.getElementById('snap-'+d);
-  if(active) active.style.color='var(--cyan)';
+  const a=document.getElementById('snap-'+d);
+  if(a) a.style.color='var(--cyan)';
 }
-function clearAllNotes() {
-  if(confirm('Clear all notes?')){ notes=[]; refreshNoteList(); drawTimeline(); }
+function clearAllNotes(){
+  if(confirm('Clear all notes?')){notes=[];selectedIndices.clear();refreshNoteList();drawTimeline();updateSelectionUI();}
 }
 
-document.addEventListener('keydown', e=>{
+document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
-  if(e.code==='Space'){ e.preventDefault(); togglePlay(); return; }
-  if(e.code==='KeyA'){ selectLane(0); stampNote(0); }
-  if(e.code==='KeyS'){ selectLane(1); stampNote(1); }
-  if(e.code==='KeyW'){ e.preventDefault(); selectLane(2); stampNote(2); }
-  if(e.code==='KeyD'){ selectLane(3); stampNote(3); }
-  if(e.code==='KeyH'){ toggleHold(); }
+
+  // Ctrl+A / Ctrl+C / Ctrl+X / Ctrl+V
+  if(e.ctrlKey||e.metaKey){
+    if(e.code==='KeyA'){e.preventDefault();selectAll();return;}
+    if(e.code==='KeyC'){e.preventDefault();copySelection();return;}
+    if(e.code==='KeyX'){e.preventDefault();cutSelection();return;}
+    if(e.code==='KeyV'){e.preventDefault();pasteClipboard();return;}
+    if(e.code==='KeyZ'){e.preventDefault();/* TODO undo */return;}
+    return;
+  }
+
+  if(e.code==='Space'){e.preventDefault();togglePlay();return;}
+  if(e.code==='Escape'){deselectAll();return;}
+  if(e.code==='Delete'||e.code==='Backspace'){
+    if(selectedIndices.size>0){e.preventDefault();cutSelection();}
+    return;
+  }
+
+  // Lane stamp keys (only in stamp mode)
+  if(currentTool==='stamp'){
+    if(e.code==='KeyA'){selectLane(0);stampNote(0);}
+    if(e.code==='KeyS'){selectLane(1);stampNote(1);}
+    if(e.code==='KeyW'){e.preventDefault();selectLane(2);stampNote(2);}
+    if(e.code==='KeyD'){selectLane(3);stampNote(3);}
+  }
+  if(e.code==='KeyH'){toggleHold();}
   if(e.code==='ArrowLeft')  seek(playhead-60/bpm);
   if(e.code==='ArrowRight') seek(playhead+60/bpm);
   if(e.code==='Home') jumpToStart();
+
+  // Tool shortcuts
+  if(e.code==='Digit1') setTool('stamp');
+  if(e.code==='Digit2') setTool('select');
+  if(e.code==='Digit3') setTool('move');
 });
 
-document.getElementById('bpm-input').addEventListener('input', e=>{ bpm=parseFloat(e.target.value)||128; drawTimeline(); });
-document.getElementById('offset-input').addEventListener('input', e=>{ offset=parseFloat(e.target.value)||0; });
-document.getElementById('zoom-slider').addEventListener('input', e=>{
+document.getElementById('bpm-input').addEventListener('input',e=>{bpm=parseFloat(e.target.value)||128;drawTimeline();});
+document.getElementById('offset-input').addEventListener('input',e=>{offset=parseFloat(e.target.value)||0;});
+document.getElementById('zoom-slider').addEventListener('input',e=>{
   zoom=parseInt(e.target.value);
   document.getElementById('zoom-val').textContent=zoom+'px/s';
   drawTimeline();
 });
-document.getElementById('speed-slider').addEventListener('input', e=>{
+document.getElementById('speed-slider').addEventListener('input',e=>{
   audioSpeed=parseInt(e.target.value)/100;
   document.getElementById('speed-val').textContent=audioSpeed+'×';
-  if(isPlaying){ pause(); play(); }
+  if(isPlaying){pause();play();}
 });
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════
 //  Note list
-// ═══════════════════════════════════════════
-function refreshNoteList() {
+// ═══════════════════════════════════════
+function refreshNoteList(){
   const list=document.getElementById('note-list');
   document.getElementById('note-count').textContent=notes.length+' notes';
   list.innerHTML='';
   [...notes].reverse().forEach((n,ri)=>{
     const realIdx=notes.length-1-ri;
-    const col=LANE_COLORS[n.lane];
-    const dur=n.duration||0;
+    const col=LANE_COLORS[n.lane], dur=n.duration||0;
+    const isSel=selectedIndices.has(realIdx);
     const div=document.createElement('div');
-    div.className='note-item';
+    div.className='note-item'+(isSel?' selected-note':'');
     div.innerHTML=`
       <span class="ni-arrow" style="color:${col}">${LANE_LABELS[n.lane]}</span>
       <span class="ni-time">${n.time.toFixed(3)}s &nbsp; beat ${(n.time/(60/bpm)+1).toFixed(2)}</span>
       ${dur>0?`<span class="ni-hold" style="color:${col}">hold ${dur.toFixed(2)}s</span>`:''}
       <button class="ni-del" onclick="event.stopPropagation();deleteNote(${realIdx})">✕</button>
     `;
-    div.addEventListener('click', ()=>seek(n.time));
+    div.addEventListener('click',()=>{
+      seek(n.time);
+      if(currentTool==='select'||currentTool==='move'){
+        selectedIndices.clear(); selectedIndices.add(realIdx);
+        updateSelectionUI(); refreshNoteList(); drawTimeline();
+      }
+    });
     list.appendChild(div);
   });
 }
-function deleteNote(i){ notes.splice(i,1); refreshNoteList(); drawTimeline(); }
-
-// ═══════════════════════════════════════════
-//  Import
-// ═══════════════════════════════════════════
-
-// Core apply function — shared by file picker and paste
-function applyChartData(raw, sourceName) {
-  const status = document.getElementById('import-status');
-  try {
-    const c = JSON.parse(raw);
-    if(!c.notes || !Array.isArray(c.notes)) throw new Error('Missing "notes" array');
-    notes = c.notes.map(n => ({ time: n.time, lane: n.lane, duration: n.duration || 0 }));
-    if(c.bpm)    { bpm    = c.bpm;    document.getElementById('bpm-input').value    = bpm; }
-    if(c.offset) { offset = c.offset; document.getElementById('offset-input').value = offset; }
-    if(c.title)  { document.getElementById('song-title').value = c.title; }
-    bpm    = parseFloat(document.getElementById('bpm-input').value)    || 128;
-    offset = parseFloat(document.getElementById('offset-input').value) || 0;
-    refreshNoteList();
-    drawTimeline();
-    const holds = notes.filter(n => n.duration > 0).length;
-    status.textContent = `✓ Loaded ${notes.length} notes (${holds} holds) from ${sourceName}`;
-    status.style.color = '#00ff88';
-    // Clear the paste textarea after a successful load
-    document.getElementById('import-textarea').value = '';
-  } catch(e) {
-    status.textContent = '✗ ' + e.message;
-    status.style.color = '#ff4444';
-  }
+function deleteNote(i){
+  notes.splice(i,1);
+  const newSel=new Set(); selectedIndices.forEach(s=>{if(s<i) newSel.add(s); else if(s>i) newSel.add(s-1);});
+  selectedIndices=newSel;
+  refreshNoteList(); drawTimeline(); updateSelectionUI();
 }
 
-// File picker → read file → applyChartData
-document.getElementById('import-file').addEventListener('change', e => {
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => applyChartData(ev.target.result, file.name);
-  reader.readAsText(file);
-  // Reset the input so the same file can be re-imported if needed
-  e.target.value = '';
+// ═══════════════════════════════════════
+//  Import
+// ═══════════════════════════════════════
+function applyChartData(raw,sourceName){
+  const status=document.getElementById('import-status');
+  try{
+    const c=JSON.parse(raw);
+    if(!c.notes||!Array.isArray(c.notes)) throw new Error('Missing "notes" array');
+    notes=c.notes.map(n=>({time:n.time,lane:n.lane,duration:n.duration||0}));
+    if(c.bpm){bpm=c.bpm;document.getElementById('bpm-input').value=bpm;}
+    if(c.offset){offset=c.offset;document.getElementById('offset-input').value=offset;}
+    if(c.title) document.getElementById('song-title').value=c.title;
+    bpm=parseFloat(document.getElementById('bpm-input').value)||128;
+    offset=parseFloat(document.getElementById('offset-input').value)||0;
+    selectedIndices.clear();
+    refreshNoteList(); drawTimeline(); updateSelectionUI();
+    const holds=notes.filter(n=>n.duration>0).length;
+    status.textContent=`✓ Loaded ${notes.length} notes (${holds} holds) from ${sourceName}`;
+    status.style.color='#00ff88';
+    document.getElementById('import-textarea').value='';
+  }catch(e){status.textContent='✗ '+e.message;status.style.color='#ff4444';}
+}
+
+document.getElementById('import-file').addEventListener('change',e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>applyChartData(ev.target.result,file.name);
+  reader.readAsText(file); e.target.value='';
 });
 
-// Paste textarea → "Load" button
-function importFromTextarea() {
-  const raw = document.getElementById('import-textarea').value.trim();
-  if(!raw) {
-    document.getElementById('import-status').textContent = 'Paste JSON above or use the file picker.';
-    document.getElementById('import-status').style.color = '#667';
-    return;
-  }
-  applyChartData(raw, 'clipboard');
+function importFromTextarea(){
+  const raw=document.getElementById('import-textarea').value.trim();
+  if(!raw){document.getElementById('import-status').textContent='Paste JSON above or use the file picker.';document.getElementById('import-status').style.color='#667';return;}
+  applyChartData(raw,'clipboard');
 }
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════
 //  Export
-// ═══════════════════════════════════════════
-function exportChart() {
+// ═══════════════════════════════════════
+function exportChart(){
   const chart={
-    title:  document.getElementById('song-title').value,
-    bpm:    parseFloat(document.getElementById('bpm-input').value)||128,
-    offset: parseFloat(document.getElementById('offset-input').value)||0,
-    notes:  notes.map(n=>({
-      time:     parseFloat(n.time.toFixed(4)),
-      lane:     n.lane,
-      duration: parseFloat((n.duration||0).toFixed(4))
-    }))
+    title:document.getElementById('song-title').value,
+    bpm:parseFloat(document.getElementById('bpm-input').value)||128,
+    offset:parseFloat(document.getElementById('offset-input').value)||0,
+    notes:notes.map(n=>({time:parseFloat(n.time.toFixed(4)),lane:n.lane,duration:parseFloat((n.duration||0).toFixed(4))}))
   };
   document.getElementById('export-output').value=JSON.stringify(chart,null,2);
 }
-function copyChart() {
+function copyChart(){
   exportChart();
   navigator.clipboard.writeText(document.getElementById('export-output').value)
-    .then(()=>alert('Copied to clipboard!'))
-    .catch(()=>alert('Select the text and copy manually.'));
+    .then(()=>alert('Copied!')).catch(()=>alert('Select text and copy manually.'));
 }
-function downloadChart() {
+function downloadChart(){
   exportChart();
   const blob=new Blob([document.getElementById('export-output').value],{type:'application/json'});
   const a=document.createElement('a');
@@ -1031,14 +1137,14 @@ function downloadChart() {
   a.click();
 }
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════
 //  Init
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════
 window.addEventListener('load',()=>{
-  drawWaveform(); drawTimeline(); setSnap(4);
+  drawWaveform(); drawTimeline(); setSnap(4); updateSelectionUI();
   new ResizeObserver(()=>drawTimeline()).observe(tlCvs);
 });
-window.addEventListener('resize',()=>{ drawWaveform(); drawTimeline(); });
+window.addEventListener('resize',()=>{drawWaveform();drawTimeline();});
 </script>
 </body>
 </html>

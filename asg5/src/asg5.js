@@ -152,9 +152,9 @@ function buildSkybox() {
   const skyMat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     uniforms: {
-      topColor:    { value: new THREE.Color(0x000d28) },   // deep navy
-      bottomColor: { value: new THREE.Color(0x330055) },   // vivid deep-purple horizon
-      midColor:    { value: new THREE.Color(0x0d0050) },   // indigo mid-band
+      topColor:    { value: new THREE.Color(0x000d28) },
+      bottomColor: { value: new THREE.Color(0x330055) },
+      midColor:    { value: new THREE.Color(0x0d0050) },
     },
     vertexShader: `
       varying vec3 vWorldPos;
@@ -176,24 +176,23 @@ function buildSkybox() {
   });
   scene.add(new THREE.Mesh(skyGeo, skyMat));
 
-  // Stars — more of them, bigger, slight colour variation
   const STAR_COUNT = 4000;
   const starGeo = new THREE.BufferGeometry();
   const starPos = new Float32Array(STAR_COUNT * 3);
   const starCol = new Float32Array(STAR_COUNT * 3);
   const palette = [
-    [1.0, 1.0, 1.0],   // white
-    [0.6, 0.8, 1.0],   // icy blue
-    [1.0, 0.85, 0.6],  // warm yellow
-    [0.9, 0.5, 1.0],   // soft purple
-    [0.5, 1.0, 0.9],   // cyan
+    [1.0, 1.0, 1.0],
+    [0.6, 0.8, 1.0],
+    [1.0, 0.85, 0.6],
+    [0.9, 0.5, 1.0],
+    [0.5, 1.0, 0.9],
   ];
   for (let i = 0; i < STAR_COUNT; i++) {
     const theta = Math.random() * Math.PI * 2;
     const phi   = Math.acos(2 * Math.random() - 1);
     const r     = 280;
     starPos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
-    starPos[i*3+1] = r * Math.abs(Math.cos(phi));  // upper hemisphere only
+    starPos[i*3+1] = r * Math.abs(Math.cos(phi));
     starPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
     const c = palette[Math.floor(Math.random() * palette.length)];
     starCol[i*3]   = c[0];
@@ -210,7 +209,6 @@ function buildSkybox() {
     opacity: 0.92,
   })));
 
-  // Nebula / aurora strips — large semi-transparent planes with gradient canvas textures
   const nebulaData = [
     { color: '#ff00cc', yRot: 0.4,  xRot: 0.18, x:  60, y: 90, z: -180 },
     { color: '#00aaff', yRot: -0.5, xRot: 0.12, x: -80, y: 70, z: -160 },
@@ -530,7 +528,6 @@ function buildTargetZones() {
     const mesh = new THREE.Mesh(geo, mat);
     geo.center();
     mesh.rotation.z = LANE_ROT_Z[i];
-    // ★ Raised from 0.36 to 0.70 to clear floor layout
     mesh.position.set(LANE_X[i], 0.7, -8);
     scene.add(mesh);
 
@@ -678,7 +675,9 @@ function updateHoldBodyVisual(arrow) {
   const headZ = arrow.position.z;
   const lane  = arrow.userData.lane;
   const len   = Math.max(arrow.userData.duration * arrowSpeed, HOLD_BODY_MIN_LEN);
-  if(arrow.userData._bodyHeadZ === headZ && arrow.userData._bodyLen === len) return;
+  // Only skip update if both Z and len haven't changed
+  const lenChanged = arrow.userData._bodyLen !== len;
+  if(!lenChanged && arrow.userData._bodyHeadZ === headZ) return;
   arrow.userData._bodyHeadZ = headZ;
   arrow.userData._bodyLen   = len;
   let body = arrow.userData.holdBody;
@@ -690,7 +689,6 @@ function updateHoldBodyVisual(arrow) {
   body.material = _holdBodyMats[lane];
   body.rotation.z = LANE_ROT_Z[lane];
   body.scale.set(HOLD_BODY_SCALE, HOLD_BODY_SCALE, len);
-  // ★ Raised trail height to 0.82 to align perfectly with the target anchor
   body.position.set(LANE_X[lane], 0.82, headZ - len * 0.5);
   body.visible = true;
 }
@@ -704,6 +702,12 @@ function arrowZAtSongTime(st, spawnTime) {
 // ─────────────────────────────────────────────
 const STATES = { EXPLORE:'explore', PROMPT:'prompt', SONGSELECT:'songselect', PLAYING:'playing', RESULT:'result' };
 let gameState  = STATES.EXPLORE;
+
+// Track the active song id so we can save hi-scores correctly
+let activeSongId = 'random';
+// Grace-period timer before endGame fires after last note clears
+let _endGameTimer = null;
+
 let score      = 0;
 let combo      = 0;
 let maxCombo   = 0;
@@ -711,9 +715,6 @@ let perfects   = 0;
 let goods      = 0;
 let misses     = 0;
 let totalNotes = 0;
-
-// Track the active song id so we can save hi-scores correctly
-let activeSongId = 'random';
 
 // ─────────────────────────────────────────────
 //  Song time clock
@@ -757,15 +758,13 @@ const controls = new PointerLockControls(camera, renderer.domElement);
 controls.pointerSpeed = CFG.mouseSensitivity;
 scene.add(camera);
 
-const _LOOK_SMOOTH = 0.22;   // 0 = instant, 1 = locked
+const _LOOK_SMOOTH = 0.22;
 let _rawYaw = 0, _rawPitch = 0;
 
-// Initialize looking values on setup to avoid jarring snapping jumps
 const initialEuler = new THREE.Euler(0, 0, 0, 'YXZ').setFromQuaternion(camera.quaternion, 'YXZ');
 _rawYaw = initialEuler.y;
 _rawPitch = initialEuler.x;
 
-// Handle pointer events cleanly
 renderer.domElement.addEventListener('mousemove', e => {
   if(!controls.isLocked) return;
   _rawYaw   -= e.movementX * CFG.mouseSensitivity * 0.002;
@@ -773,20 +772,15 @@ renderer.domElement.addEventListener('mousemove', e => {
   _rawPitch  = Math.max(-Math.PI/2, Math.min(Math.PI/2, _rawPitch));
 }, false);
 
-// Disable the fallback internal handler to maintain single source of truth control
 if(controls._onMouseMove) {
   renderer.domElement.removeEventListener('mousemove', controls._onMouseMove);
 }
 
-// Clean camera look calculations to drop the rubber-banding / floating spring effect
 function applySmoothLook() {
   if(!controls.isLocked && gameState !== STATES.PLAYING) return;
   const currentEuler = new THREE.Euler(0, 0, 0, 'YXZ').setFromQuaternion(camera.quaternion, 'YXZ');
-  
-  // Directly interpolate frame rotations instead of feedback looping camera properties
-  let targetYaw = currentEuler.y + (_rawYaw - currentEuler.y) * (1 - _LOOK_SMOOTH);
+  let targetYaw   = currentEuler.y + (_rawYaw   - currentEuler.y) * (1 - _LOOK_SMOOTH);
   let targetPitch = currentEuler.x + (_rawPitch - currentEuler.x) * (1 - _LOOK_SMOOTH);
-  
   targetPitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, targetPitch));
   camera.quaternion.setFromEuler(new THREE.Euler(targetPitch, targetYaw, 0, 'YXZ'));
 }
@@ -822,6 +816,10 @@ canvas.addEventListener('click',()=>{
 
 let _programmingUnlock = false;
 controls.addEventListener('unlock',()=>{
+  // Always zero velocity and clear move flags on unlock to prevent
+  // stale velocity snapping when pointer lock re-acquires.
+  vel.set(0, 0, 0);
+  moveF=moveB=moveL=moveR=moveU=moveD=false;
   if(_programmingUnlock) { _programmingUnlock=false; return; }
   if(gameState===STATES.PLAYING) exitGame();
 });
@@ -913,6 +911,8 @@ function enterGame() {
 
   score=0;combo=0;maxCombo=0;perfects=0;goods=0;misses=0;totalNotes=0;noteIndex=0;
   lastWrongPressTime=-1;
+  // Clear any pending end-game timer from a previous session
+  if(_endGameTimer){ clearTimeout(_endGameTimer); _endGameTimer=null; }
 
   songStartWall = 0;
   useAudioClock = false;
@@ -963,17 +963,23 @@ function restoreExploreRendering() {
 }
 
 function exitGame() {
+  if(_endGameTimer){ clearTimeout(_endGameTimer); _endGameTimer=null; }
   gameState=STATES.EXPLORE;
   randomActive=false;
   songStartWall=0;
   stopSongAudio();
   restoreExploreRendering();
   [...activeArrows].forEach(a=>recycleArrow(a));
+  // Restore saved explore camera position
   camera.position.copy(exploreCamPos);
   camera.quaternion.copy(exploreCamQuat);
+  // Sync raw look values to restored quaternion so smooth look doesn't snap
   const euler = new THREE.Euler(0,0,0,'YXZ');
   euler.setFromQuaternion(exploreCamQuat,'YXZ');
   _rawYaw = euler.y; _rawPitch = euler.x;
+  // Zero velocity so there's no snap from stale values
+  vel.set(0, 0, 0);
+  moveF=moveB=moveL=moveR=moveU=moveD=false;
   hudEl.style.display='none';
   promptEl.style.display='none';
   resultEl.style.display='none';
@@ -981,6 +987,7 @@ function exitGame() {
 }
 
 function endGame() {
+  if(_endGameTimer){ clearTimeout(_endGameTimer); _endGameTimer=null; }
   gameState=STATES.RESULT;
   randomActive=false;
   songStartWall=0;
@@ -1014,7 +1021,6 @@ function spawnNote({ lane, time, duration = 0 }) {
   const st         = songTime();
   const spawnTime  = time - travelTime;
   const isHold     = duration > 0;
-  // ★ Raised active notes height from 0.5 to 0.84 to clean structural layering
   arrow.position.set(LANE_X[lane], 0.84, arrowZAtSongTime(st, spawnTime));
   arrow.userData.spawnTime   = spawnTime;
   arrow.userData.targetTime  = time;
@@ -1046,7 +1052,12 @@ function scheduleChart() {
     songAudioStartCtx = audioCtx.currentTime;
     useAudioClock = true;
     songSource.start(0, 0);
-    songSource.onended = ()=>{ if(gameState===STATES.PLAYING) endGame(); };
+    songSource.onended = ()=>{
+      // Audio ended — only trigger endGame if chart notes are also exhausted
+      if(gameState===STATES.PLAYING && noteIndex>=chart.notes.length && activeArrows.length===0) {
+        endGame();
+      }
+    };
   };
   if(audioCtx.state === 'suspended') {
     audioCtx.resume().then(startAudio);
@@ -1076,7 +1087,8 @@ function hasNearMissOnLane(lane, t) {
     if(a.userData.isHold && a.userData.holdStarted) return false;
     if(!a.userData.isHold && a.userData.hit) return false;
     const d = Math.abs(t - a.userData.targetTime);
-    return d > HIT_WINDOW && d <= HIT_WINDOW * 1.75;
+    // Tightened: only flag as near-miss if just slightly outside the window
+    return d > HIT_WINDOW && d <= HIT_WINDOW * 1.4;
   });
 }
 
@@ -1084,8 +1096,9 @@ function punishWrongInput() {
   const t = songTime();
   if(t - lastWrongPressTime < WRONG_PRESS_COOLDOWN) return;
   lastWrongPressTime = t;
+  // Break combo but don't add a miss — pressing the wrong lane during a
+  // multi-note window is already punishing enough via the lost combo.
   combo = 0;
-  misses++;
   markHudDirty();
   showJudge('WRONG','#ff4444');
 }
@@ -1150,8 +1163,14 @@ function handleHitInput(lane) {
   const hittable = getHittableNotes(t);
   const onLane   = hittable.filter(a=>a.userData.lane===lane);
   if(onLane.length === 0) {
-    if(hittable.length > 0 || hasNearMissOnLane(lane, t)) {
+    // Only punish if there's a note on a different lane right now (wrong lane press).
+    // Never punish completely empty taps.
+    if(hittable.length > 0) {
       punishWrongInput();
+    } else if(hasNearMissOnLane(lane, t)) {
+      // Note is close but not quite in window — soft feedback only, no penalty
+      showJudge('EARLY','#ff8844');
+      flashTarget(lane, 0.2);
     } else {
       flashTarget(lane, 0.3);
     }
@@ -1512,8 +1531,9 @@ function animate() {
           else break;
         } else break;
       }
-      if(noteIndex>=chart.notes.length && activeArrows.length===0) {
-        endGame();
+      // Schedule end-game after a grace period once all notes are gone
+      if(noteIndex>=chart.notes.length && activeArrows.length===0 && !_endGameTimer) {
+        _endGameTimer = setTimeout(endGame, 800);
       }
     }
 
@@ -1523,7 +1543,6 @@ function animate() {
       const arrow=activeArrows[i];
       const elapsed=st - arrow.userData.spawnTime;
       arrow.position.z = arrowZAtSongTime(st, arrow.userData.spawnTime);
-      // ★ Modified base height offset to bounce smoothly relative to its raised 0.84 position
       arrow.position.y=0.84+Math.sin(elapsed*3)*0.04;
 
       if(arrow.userData.isHold) {
